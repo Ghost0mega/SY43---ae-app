@@ -4,13 +4,23 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.example.sy43___ae_app.ui.theme.SY43aeappTheme
 
 class MainActivity : ComponentActivity() {
@@ -20,10 +30,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             SY43aeappTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                    ColorTestBlock(modifier = Modifier.padding(innerPadding))
                 }
             }
         }
@@ -31,17 +38,40 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
+fun ColorTestBlock(modifier: Modifier = Modifier) {
+    val colors = listOf(
+        "Primary" to MaterialTheme.colorScheme.primary,
+        "Secondary" to MaterialTheme.colorScheme.secondary,
+        "Tertiary" to MaterialTheme.colorScheme.tertiary,
     )
+
+    Column(
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        colors.forEach { (label, color) ->
+            Box(
+                modifier = Modifier
+                    .size(width = 200.dp, height = 60.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(color),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = label,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    style = MaterialTheme.typography.labelLarge
+                )
+            }
+        }
+    }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
     SY43aeappTheme {
-        Greeting("Android")
+        ColorTestBlock()
     }
 }
