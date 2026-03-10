@@ -40,9 +40,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun ColorTestBlock(modifier: Modifier = Modifier) {
     val colors = listOf(
-        "Primary" to MaterialTheme.colorScheme.primary,
-        "Secondary" to MaterialTheme.colorScheme.secondary,
-        "Tertiary" to MaterialTheme.colorScheme.tertiary,
+        Triple("Primary", MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.onPrimary),
+        Triple("Secondary", MaterialTheme.colorScheme.secondary, MaterialTheme.colorScheme.onSecondary),
+        Triple("Tertiary", MaterialTheme.colorScheme.tertiary, MaterialTheme.colorScheme.onTertiary),
     )
 
     Column(
@@ -50,17 +50,17 @@ fun ColorTestBlock(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        colors.forEach { (label, color) ->
+        colors.forEach { (label, bgColor, textColor) ->
             Box(
                 modifier = Modifier
                     .size(width = 200.dp, height = 60.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(color),
+                    .background(bgColor),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = label,
-                    color = MaterialTheme.colorScheme.onPrimary,
+                    color = textColor,
                     style = MaterialTheme.typography.labelLarge
                 )
             }
