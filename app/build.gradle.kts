@@ -57,4 +57,5 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.cio)
+
 }
