@@ -1,15 +1,53 @@
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+# ──────────────────────────────
+# Android
+# ──────────────────────────────
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+bin/
+gen/
+out/
+build/
+local.properties          # contains your local SDK path, never commit this
+
+# ──────────────────────────────
+# Android Studio / IntelliJ IDEA
+# ──────────────────────────────
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/shelf/
+.idea/dictionaries/
+.idea/httpRequests/
+.idea/dataSources/
+.idea/dataSources.local.xml
+.idea/.name
+*.iml                     # some teams keep these, but they're often machine-specific
+
+# ──────────────────────────────
+# Gradle
+# ──────────────────────────────
+.gradle/
+gradle-app.setting
+!gradle-wrapper.jar       # keep the wrapper so teammates don't need Gradle installed
+.gradletasknamecache
+
+# ──────────────────────────────
+# Kotlin / JVM
+# ──────────────────────────────
+*.kotlin_module
+
+# ──────────────────────────────
+# Ktor / sensitive config
+# ──────────────────────────────
 local.properties
+secrets.properties        # if you store API keys/base URLs here
+*.env
+api_keys.xml              # if you put keys in res/values
+
+# ──────────────────────────────
+# OS junk
+# ──────────────────────────────
+.DS_Store
+Thumbs.db
