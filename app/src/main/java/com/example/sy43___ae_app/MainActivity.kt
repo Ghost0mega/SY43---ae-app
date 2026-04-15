@@ -14,6 +14,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -31,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -44,11 +51,11 @@ import io.ktor.client.statement.*
 // Il est préférable de créer le client en dehors du composant pour pouvoir le réutiliser
 val ktorClient = HttpClient(CIO)
 
-private enum class BottomTab(val label: String, val iconText: String) {
-    HOME("Home", "H"),
-    CALENDAR("Calendar", "C"),
-    PROFILE("Profile", "P"),
-    SETTINGS("Settings", "S")
+private enum class BottomTab(val label: String, val icon: ImageVector) {
+    HOME("Home", Icons.Filled.Home),
+    CALENDAR("Calendar", Icons.Filled.CalendarMonth),
+    PROFILE("Profile", Icons.Filled.Person),
+    SETTINGS("Settings", Icons.Filled.Settings)
 }
 
 class MainActivity : ComponentActivity() {
@@ -75,7 +82,12 @@ private fun AppWithBottomNav(modifier: Modifier = Modifier) {
                     NavigationBarItem(
                         selected = selectedTabIndex == index,
                         onClick = { selectedTabIndex = index },
-                        icon = { Text(tab.iconText) },
+                        icon = {
+                            Icon(
+                                imageVector = tab.icon,
+                                contentDescription = tab.label
+                            )
+                        },
                         label = { Text(tab.label) },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = MaterialTheme.colorScheme.onSecondary,
