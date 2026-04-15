@@ -15,13 +15,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,17 +44,68 @@ import io.ktor.client.statement.*
 // Il est préférable de créer le client en dehors du composant pour pouvoir le réutiliser
 val ktorClient = HttpClient(CIO)
 
+private enum class BottomTab(val label: String, val iconText: String) {
+    HOME("Home", "H"),
+    CALENDAR("Calendar", "C"),
+    PROFILE("Profile", "P"),
+    SETTINGS("Settings", "S")
+}
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            SY43aeappTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    ColorTestBlock(modifier = Modifier.padding(innerPadding))
+            SY43aeappTheme(dynamicColor = false) {
+                AppWithBottomNav(modifier = Modifier.fillMaxSize())
+            }
+        }
+    }
+}
+
+@Composable
+private fun AppWithBottomNav(modifier: Modifier = Modifier) {
+    var selectedTabIndex by rememberSaveable { mutableIntStateOf(BottomTab.HOME.ordinal) }
+
+    Scaffold(
+        modifier = modifier,
+        bottomBar = {
+            NavigationBar(containerColor = MaterialTheme.colorScheme.primary) {
+                BottomTab.entries.forEachIndexed { index, tab ->
+                    NavigationBarItem(
+                        selected = selectedTabIndex == index,
+                        onClick = { selectedTabIndex = index },
+                        icon = { Text(tab.iconText) },
+                        label = { Text(tab.label) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.onSecondary,
+                            selectedTextColor = MaterialTheme.colorScheme.onSecondary,
+                            indicatorColor = MaterialTheme.colorScheme.secondary,
+                            unselectedIconColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.80f),
+                            unselectedTextColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.80f)
+                        )
+                    )
                 }
             }
         }
+    ) { innerPadding ->
+        val contentModifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)
+
+        when (BottomTab.entries[selectedTabIndex]) {
+            BottomTab.HOME -> ColorTestBlock(modifier = contentModifier)
+            BottomTab.CALENDAR -> PlaceholderScreen(title = "Calendar", modifier = contentModifier)
+            BottomTab.PROFILE -> PlaceholderScreen(title = "Profile", modifier = contentModifier)
+            BottomTab.SETTINGS -> PlaceholderScreen(title = "Settings", modifier = contentModifier)
+        }
+    }
+}
+
+@Composable
+private fun PlaceholderScreen(title: String, modifier: Modifier = Modifier) {
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        Text(text = "$title screen", style = MaterialTheme.typography.titleMedium)
     }
 }
 
@@ -114,7 +170,7 @@ fun ColorTestBlock(modifier: Modifier = Modifier) {
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
-    SY43aeappTheme {
-        ColorTestBlock()
+    SY43aeappTheme(dynamicColor = false) {
+        AppWithBottomNav()
     }
 }
