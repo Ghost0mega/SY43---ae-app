@@ -1,5 +1,7 @@
 package com.example.sy43___ae_app
 
+import NewsDateResult
+import android.annotation.SuppressLint
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -41,15 +43,19 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.sy43___ae_app.DataBase.ApiServices.ApiServiceImpl
+import com.example.sy43___ae_app.DataBase.ApiServices.Services.newService
+import com.example.sy43___ae_app.DataBase.dataBase
 import com.example.sy43___ae_app.ui.theme.SY43aeappTheme
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 
-import io.ktor.client.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
+
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.json.Json
 
 // Il est préférable de créer le client en dehors du composant pour pouvoir le réutiliser
-val ktorClient = HttpClient(CIO)
 
 private enum class BottomTab(val label: String, val icon: ImageVector) {
     HOME("Home", Icons.Filled.Home),
@@ -61,6 +67,10 @@ private enum class BottomTab(val label: String, val icon: ImageVector) {
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        dataBase.init(this)
+
+        // UI
         enableEdgeToEdge()
         setContent {
             SY43aeappTheme(dynamicColor = false) {
@@ -121,26 +131,55 @@ private fun PlaceholderScreen(title: String, modifier: Modifier = Modifier) {
     }
 }
 
+@SuppressLint("RememberReturnType")
 @Composable
 fun ColorTestBlock(modifier: Modifier = Modifier) {
 
     var apiResponse by remember { mutableStateOf("Chargement des données API...") }
+    var newsList by remember { mutableStateOf<List<NewsDateResult>>(emptyList()) }
 
-    // 2. Lancement de la requête réseau au démarrage de l'écran
+    // test faudra bouger ca hors du front
+    val client = remember {
+        HttpClient(CIO) {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true })
+            }
+        }
+    }
+    val apiService = remember { ApiServiceImpl(client) }
+    val newService = remember { newService(apiService) }
+
+    // Appelle une seule fois pour pas faire crash le front
     LaunchedEffect(Unit) {
         try {
-            // Requête GET vers une API de test (JSONPlaceholder)
-            val response: HttpResponse = ktorClient.get("https://ae.utbm.fr/api/user")
-            apiResponse = response.bodyAsText() // On lit le corps de la réponse en texte
+            val results = newService.getNews("2026-04-17")
+            newsList = results
+            apiResponse = "Données récupérées : ${results.joinToString(separator = ", ") {
+                    it.news.title
+            }} news"
+
         } catch (e: Exception) {
-            apiResponse = "Erreur de connexion : ${e.localizedMessage}"
+            apiResponse = "Erreur : ${e.localizedMessage}"
         }
+    }
+
+
+    LaunchedEffect(Unit) {
+
     }
 
     val colors = listOf(
         Triple("Primary", MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.onPrimary),
-        Triple("Secondary", MaterialTheme.colorScheme.secondary, MaterialTheme.colorScheme.onSecondary),
-        Triple("Tertiary", MaterialTheme.colorScheme.tertiary, MaterialTheme.colorScheme.onTertiary),
+        Triple(
+            "Secondary",
+            MaterialTheme.colorScheme.secondary,
+            MaterialTheme.colorScheme.onSecondary
+        ),
+        Triple(
+            "Tertiary",
+            MaterialTheme.colorScheme.tertiary,
+            MaterialTheme.colorScheme.onTertiary
+        ),
     )
 
     Column(
