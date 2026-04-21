@@ -47,6 +47,7 @@ import com.example.sy43___ae_app.DataBase.ApiServices.ApiServiceImpl
 import com.example.sy43___ae_app.DataBase.ApiServices.Services.newService
 import com.example.sy43___ae_app.DataBase.dataBase
 import com.example.sy43___ae_app.ui.theme.SY43aeappTheme
+import coil.compose.AsyncImage
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -183,10 +184,14 @@ fun ColorTestBlock(modifier: Modifier = Modifier) {
     )
 
     Column(
-        modifier = modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+        modifier = modifier
+            .fillMaxSize()
+            .padding(top = 16.dp, bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        UrlImageTest(modifier = Modifier.size(160.dp))
+
         Text(
             text = "Résultat de l'API :",
             style = MaterialTheme.typography.titleMedium
@@ -216,6 +221,15 @@ fun ColorTestBlock(modifier: Modifier = Modifier) {
             }
         }
     }
+}
+
+@Composable
+fun UrlImageTest(modifier: Modifier = Modifier) {
+    AsyncImage(
+        model = "https://ae.utbm.fr/static/core/img/logo_no_text.f7b33b3ef4d8.png",
+        contentDescription = "UTBM AE logo",
+        modifier = modifier
+    )
 }
 
 @Preview(showBackground = true)
