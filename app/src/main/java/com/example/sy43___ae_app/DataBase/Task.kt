@@ -16,7 +16,7 @@ object Clubs : Table("clubs") {
     val name = varchar("name", MAX_VARCHAR_LENGTH)
     val logo = varchar("logo", MAX_URL_LENGTH)
     val url = varchar("url", MAX_URL_LENGTH)
-    val shortDescription = varchar("short_description", MAX_TEXT_LENGTH)
+    val shortDescription = varchar("short_description", MAX_TEXT_LENGTH).nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

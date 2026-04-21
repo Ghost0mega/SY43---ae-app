@@ -1,3 +1,5 @@
+package com.example.sy43___ae_app.DataBase.ApiServices.NetworkDTO
+
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
 
@@ -33,8 +35,8 @@ data class ClubDTO(
     val name: String,
     val logo: String,
     val url: String,
-    val short_description: String,
-    val results: ArrayList<MemberDTO>
+    val member: List<MemberDTO> = emptyList(),
+    @SerialName("short_description") val shortDescription: String? = null
 )
 
 @Serializable

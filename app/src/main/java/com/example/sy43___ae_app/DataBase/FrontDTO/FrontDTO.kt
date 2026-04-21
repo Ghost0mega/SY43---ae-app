@@ -17,7 +17,7 @@ data class ClubUI(
     val name: String,
     val logo: String,
     val url: String,
-    val short_description: String,
+    val shortDescription: String?,
     val members: List<MemberUI>
 )
 

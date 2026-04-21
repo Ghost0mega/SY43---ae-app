@@ -1,5 +1,6 @@
 package com.example.sy43___ae_app.DataBase.ApiServices
 
+import android.util.Log
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -12,6 +13,7 @@ open class ApiServiceImpl(val client : HttpClient) : ApiService {
         request : String,
         block: HttpRequestBuilder.() -> Unit
     ): String {
+        Log.d("Api_Request_Loggin", "Request Start")
         return try {
             val response: HttpResponse = client.get("https://ae.utbm.fr/api/$request") {
                 header("X-APIKey", BuildConfig.ApiKey)
@@ -20,6 +22,7 @@ open class ApiServiceImpl(val client : HttpClient) : ApiService {
             response.bodyAsText()
 
         } catch (e: Exception) {
+            Log.d("Api_Request_Loggin", "Request ERROR : ${e.localizedMessage}")
             "Erreur de connexion : ${e.localizedMessage}"
         }
     }
