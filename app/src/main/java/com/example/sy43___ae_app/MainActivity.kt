@@ -3,6 +3,7 @@ package com.example.sy43___ae_app
 import com.example.sy43___ae_app.DataBase.ApiServices.NetworkDTO.NewsDateResult
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -43,9 +44,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
 import com.example.sy43___ae_app.DataBase.ApiServices.ApiServiceImpl
 import com.example.sy43___ae_app.DataBase.ApiServices.Services.newService
-import com.example.sy43___ae_app.DataBase.dataBase
+import com.example.sy43___ae_app.DataBase.FrontDTO.NewUI
+import com.example.sy43___ae_app.DataBase.dataBaseManager
 import com.example.sy43___ae_app.ui.theme.SY43aeappTheme
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
@@ -53,6 +56,9 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 
 
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 
 private enum class BottomTab(val label: String, val icon: ImageVector) {
@@ -66,8 +72,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        dataBase.init(this)
-
+        lifecycleScope.launch {
+            dataBaseManager.init(this@MainActivity)
+        }
         // UI
         enableEdgeToEdge()
         setContent {
@@ -114,7 +121,7 @@ private fun AppWithBottomNav(modifier: Modifier = Modifier) {
             .padding(innerPadding)
 
         when (BottomTab.entries[selectedTabIndex]) {
-            BottomTab.HOME -> ColorTestBlock(modifier = contentModifier)
+            BottomTab.HOME -> newsBlock(modifier = contentModifier, dataBaseManager.instance)
             BottomTab.CALENDAR -> PlaceholderScreen(title = "Calendar", modifier = contentModifier)
             BottomTab.PROFILE -> PlaceholderScreen(title = "Profile", modifier = contentModifier)
             BottomTab.SETTINGS -> PlaceholderScreen(title = "Settings", modifier = contentModifier)
@@ -131,40 +138,24 @@ private fun PlaceholderScreen(title: String, modifier: Modifier = Modifier) {
 
 @SuppressLint("RememberReturnType")
 @Composable
-fun ColorTestBlock(modifier: Modifier = Modifier) {
+fun newsBlock(modifier: Modifier = Modifier, db: dataBaseManager?) {
+    var news by remember { mutableStateOf<List<NewUI>>(emptyList()) }
+    var errorMessage by remember { mutableStateOf("") }
 
-    var apiResponse by remember { mutableStateOf("Chargement des données API...") }
-    var newsList by remember { mutableStateOf<List<NewsDateResult>>(emptyList()) }
+    LaunchedEffect(db) {
+        if (db == null) return@LaunchedEffect // On attend que la DB soit prête
 
-    // test faudra bouger ca hors du front
-    val client = remember {
-        HttpClient(CIO) {
-            install(ContentNegotiation) {
-                json(Json { ignoreUnknownKeys = true })
-            }
-        }
-    }
-    val apiService = remember { ApiServiceImpl(client) }
-    val newService = remember { newService(apiService) }
-
-    // Appelle une seule fois pour pas faire crash le front
-    LaunchedEffect(Unit) {
         try {
-            val results = newService.getNews("2026-04-17")
-            newsList = results
-            apiResponse = "Données récupérées : ${results.joinToString(separator = ", ") {
-                    it.news.title
-            }} news"
-
+            val result = withContext(Dispatchers.IO) {
+                db.repository.getAllNews()
+            }
+            news = result
         } catch (e: Exception) {
-            apiResponse = "Erreur : ${e.localizedMessage}"
+            Log.e("DB_DEBUG", "Erreur dans le LaunchedEffect", e)
+            errorMessage = e.localizedMessage ?: "Erreur inconnue"
         }
     }
 
-
-    LaunchedEffect(Unit) {
-
-    }
 
     val colors = listOf(
         Triple("Primary", MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.onPrimary),
@@ -190,7 +181,13 @@ fun ColorTestBlock(modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.titleMedium
         )
         Text(
-            text = apiResponse,
+            text = news.getOrNull(0)?.title ?: if (news.isEmpty()) "Aucune news en base" else errorMessage,
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp)
+        )
+        Text(
+            text = news.getOrNull(0)?.summary ?: if (news.isEmpty()) "Aucune news en base" else errorMessage,
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp)

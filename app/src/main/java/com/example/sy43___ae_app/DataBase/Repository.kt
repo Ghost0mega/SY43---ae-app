@@ -1,9 +1,11 @@
 package com.example.sy43___ae_app.DataBase
 
+import android.util.Log
 import com.example.sy43___ae_app.DataBase.FrontDTO.ClubUI
 import com.example.sy43___ae_app.DataBase.FrontDTO.MemberUI
 import com.example.sy43___ae_app.DataBase.FrontDTO.NewUI
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
@@ -18,19 +20,23 @@ class Repository {
     *
      */
     fun getAllNews(): List<NewUI> {
+        Log.d("DB_DEBUG", "getAllnew Start")
+
         return transaction {
-            (News innerJoin Clubs
-            innerJoin NewsPagination).selectAll().map { row ->
-                NewUI(
-                    id = row[News.id],
-                    title = row[News.title],
-                    summary = row[News.summary],
-                    clubName = row[Clubs.name],
-                    logoUrl = row[Clubs.logo],
-                    startDate = row[NewsPagination.startDate],
-                    endDate = row[NewsPagination.endDate]
-                )
-            }
+            // La requête finale de retour
+            (News innerJoin Clubs innerJoin NewsPagination)
+                .selectAll()
+                .map { row ->
+                    NewUI(
+                        id = row[News.id],
+                        title = row[News.title],
+                        summary = row[News.summary],
+                        clubName = row[Clubs.name],
+                        logoUrl = row[Clubs.logo],
+                        startDate = row[NewsPagination.startDate],
+                        endDate = row[NewsPagination.endDate]
+                    )
+                }
         }
     }
 
