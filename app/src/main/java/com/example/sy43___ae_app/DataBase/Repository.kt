@@ -60,7 +60,7 @@ class Repository {
                     name = clubRow[Clubs.name],
                     logo = clubRow[Clubs.logo],
                     url = clubRow[Clubs.url],
-                    short_description = clubRow[Clubs.shortDescription],
+                    shortDescription = clubRow[Clubs.shortDescription],
                     members = membersForThisClub
                 )
             }

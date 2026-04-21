@@ -30,7 +30,7 @@ class dataBase {
     val newService = newService(apiService)
     companion object  {
         fun init(activity: MainActivity) {
-            Database.connect("jdbc:h2:mem:test", driver = "org.h2.Driver")
+            Database.connect("jdbc:h2:mem:AE", driver = "org.h2.Driver")
 
             transaction {
 
@@ -46,10 +46,24 @@ class dataBase {
     suspend fun newRefresh(){
         val now = LocalDate.now().toString()
         val newDTO = newService.getNews(now)
-
+//        val clubDTO: ClubDTO
+//        newDTO.forEach { r ->
+//            val clubID = r.news.club.id
+//            clubDTO = clubService.getClubByID(clubID)
+//        }
+//        val clubDTO =
         withContext(Dispatchers.IO) {
             transaction {
                 newDTO.forEach { result ->
+
+                    Clubs.upsert {
+                        it[id] = result.news.club.id
+                        it[name] = result.news.club.name
+                        it[logo] = result.news.club.logo
+                        it[url] = result.news.club.url
+                        it[shortDescription] = result.news.club.shortDescription
+                    }
+
                     News.upsert {
                         it[id] = result.news.id
                         it[title] = result.news.title
@@ -63,14 +77,6 @@ class dataBase {
                         it[id] = result.id
                         it[startDate] = LocalDateTime.parse(result.startDate)
                         it[endDate] = LocalDateTime.parse(result.startDate)
-                    }
-
-                    Clubs.upsert {
-                        it[id] = result.news.club.id
-                        it[name] = result.news.club.name
-                        it[logo] = result.news.club.logo
-                        it[url] = result.news.club.url
-                        it[shortDescription] = result.news.club.short_description
                     }
                 }
             }

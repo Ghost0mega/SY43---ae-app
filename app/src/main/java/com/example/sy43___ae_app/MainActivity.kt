@@ -1,6 +1,6 @@
 package com.example.sy43___ae_app
 
-import NewsDateResult
+import com.example.sy43___ae_app.DataBase.ApiServices.NetworkDTO.NewsDateResult
 import android.annotation.SuppressLint
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -54,8 +54,6 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
-
-// Il est préférable de créer le client en dehors du composant pour pouvoir le réutiliser
 
 private enum class BottomTab(val label: String, val icon: ImageVector) {
     HOME("Home", Icons.Filled.Home),
