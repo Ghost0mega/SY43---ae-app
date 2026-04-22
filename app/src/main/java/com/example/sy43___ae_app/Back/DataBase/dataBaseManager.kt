@@ -27,6 +27,7 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import org.jetbrains.exposed.v1.jdbc.replace
 
 class dataBaseManager(
     client: HttpClient,
@@ -140,15 +141,18 @@ class dataBaseManager(
                             it[id] = result.id
                             it[newsDetailId] = result.news.id
 
-                            it[lastUpdate] = ZonedDateTime.parse(now)
-                                .withZoneSameInstant(ZoneId.of("Europe/Paris"))
-                                .toLocalDateTime()
-
                             // Format date to french hours
                             it[startDate] = ZonedDateTime.parse(result.startDate)
                                 .withZoneSameInstant(ZoneId.of("Europe/Paris"))
                                 .toLocalDateTime()
                             it[endDate] = ZonedDateTime.parse(result.endDate)
+                                .withZoneSameInstant(ZoneId.of("Europe/Paris"))
+                                .toLocalDateTime()
+                        }
+
+                        DbMetadata.replace {
+                            it[key] = "New"
+                            it[lastUpdate] = ZonedDateTime.parse(now)
                                 .withZoneSameInstant(ZoneId.of("Europe/Paris"))
                                 .toLocalDateTime()
                         }

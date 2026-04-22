@@ -11,6 +11,13 @@ const val MAX_VARCHAR_LENGTH = 128
 const val MAX_URL_LENGTH = 512
 const val MAX_TEXT_LENGTH = 2048
 
+object DbMetadata : Table("db_metadata") {
+    val key = varchar("key", MAX_VARCHAR_LENGTH) // ex: "news_sync", "clubs_sync"
+    val lastUpdate = datetime("last_update")
+
+    override val primaryKey = PrimaryKey(key)
+}
+
 object Clubs : Table("clubs") {
     val id = integer("id")
     val name = varchar("name", MAX_VARCHAR_LENGTH)
@@ -52,8 +59,6 @@ object NewsPagination : Table("news_results") {
     val id = integer("id")
     val startDate = datetime("start_date")
     val endDate = datetime("end_date")
-
-    val lastUpdate = datetime("lastUpdate")
     val newsDetailId = integer("news_detail_id").references(News.id)
 
     override val primaryKey = PrimaryKey(id)

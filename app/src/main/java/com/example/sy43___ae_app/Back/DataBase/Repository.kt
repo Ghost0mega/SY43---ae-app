@@ -22,6 +22,10 @@ class Repository {
         Log.d("DB_DEBUG", "getAllnew Start")
 
         return transaction {
+            val lastupdate = DbMetadata
+                .selectAll()
+                .where { DbMetadata.key eq "New" }
+
             // La requête finale de retour
             (News innerJoin Clubs innerJoin NewsPagination)
                 .selectAll()
@@ -34,7 +38,7 @@ class Repository {
                         logoUrl = row[Clubs.logo],
                         startDate = row[NewsPagination.startDate],
                         endDate = row[NewsPagination.endDate],
-                        lastUpdate = row[NewsPagination.lastUpdate]
+                        lastUpdate = lastupdate
                     )
                 }
         }

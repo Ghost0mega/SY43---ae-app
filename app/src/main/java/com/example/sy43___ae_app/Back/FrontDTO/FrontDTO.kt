@@ -1,5 +1,6 @@
 package com.example.sy43___ae_app.Back.FrontDTO
 
+import org.jetbrains.exposed.v1.jdbc.Query
 import java.time.LocalDateTime
 
 data class NewUI(
@@ -10,7 +11,7 @@ data class NewUI(
     val logoUrl: String,
     val startDate: LocalDateTime,
     val endDate: LocalDateTime,
-    val lastUpdate : LocalDateTime
+    val lastUpdate: Query
 )
 
 data class ClubUI(
