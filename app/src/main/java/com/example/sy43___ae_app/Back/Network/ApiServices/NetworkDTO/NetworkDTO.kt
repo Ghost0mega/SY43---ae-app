@@ -1,4 +1,4 @@
-package com.example.sy43___ae_app.DataBase.ApiServices.NetworkDTO
+package com.example.sy43___ae_app.Back.Network.ApiServices.NetworkDTO
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
@@ -8,7 +8,7 @@ data class NewsPaginationResponse(
     val count: Int,
     val next: String?,
     val previous: String?,
-    val results: ArrayList<NewsDateResult>
+    var results: ArrayList<NewsDateResult>
 )
 
 @Serializable

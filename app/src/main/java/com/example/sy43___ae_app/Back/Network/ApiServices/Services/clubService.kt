@@ -1,8 +1,6 @@
-package com.example.sy43___ae_app.DataBase.ApiServices.Services
+package com.example.sy43___ae_app.Back.Network.ApiServices.Services
 
-import com.example.sy43___ae_app.DataBase.ApiServices.NetworkDTO.ClubDTO
-import com.example.sy43___ae_app.DataBase.ApiServices.ApiService
-import kotlinx.serialization.json.Json
+import com.example.sy43___ae_app.Back.Network.ApiServices.ApiService
 
 class clubService(private val apiService: ApiService) {
 

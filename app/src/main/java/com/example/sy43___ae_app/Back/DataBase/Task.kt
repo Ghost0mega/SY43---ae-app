@@ -1,4 +1,4 @@
-package com.example.sy43___ae_app.DataBase
+package com.example.sy43___ae_app.Back.DataBase
 
 import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.javatime.datetime
@@ -50,11 +50,29 @@ object News : Table("news_details") {
 // 4. Table des Résultats de News (Dates et liaison)
 object NewsPagination : Table("news_results") {
     val id = integer("id")
-    val startDate = datetime("start_date") // Ou datetime() si vous parsez les dates
+    val startDate = datetime("start_date")
     val endDate = datetime("end_date")
 
-    // Liaison 1-to-1 ou Many-to-1 avec NewsDetail
+    val lastUpdate = datetime("lastUpdate")
     val newsDetailId = integer("news_detail_id").references(News.id)
 
     override val primaryKey = PrimaryKey(id)
+}
+
+object Groups : Table("group") {
+    val id = integer("id").autoIncrement()
+    val name = varchar("name", MAX_VARCHAR_LENGTH)
+    override val primaryKey = PrimaryKey(id)
+}
+
+object NewsSubscriptionGroups : Table("news_subscription_groups") {
+    val groupId = integer("group_id").references(Groups.id)
+    val newId = integer("new_id").references(News.id)
+    override val primaryKey = PrimaryKey(groupId, newId)
+}
+
+object ClubSubscriptionGroups : Table("club_subscription_groups") {
+    val groupId = integer("group_id").references(Groups.id)
+    val clubId = integer("club_id").references(Clubs.id)
+    override val primaryKey = PrimaryKey(groupId, clubId)
 }

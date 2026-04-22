@@ -1,36 +1,40 @@
-package com.example.sy43___ae_app.DataBase
-import android.util.Log
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import java.time.LocalDate
-import com.example.sy43___ae_app.MainActivity
-import org.jetbrains.exposed.v1.jdbc.Database
+package com.example.sy43___ae_app.Back.DataBase
 
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import com.example.sy43___ae_app.DataBase.ApiServices.ApiService
-import com.example.sy43___ae_app.DataBase.ApiServices.ApiServiceImpl
-import com.example.sy43___ae_app.DataBase.ApiServices.Services.clubService
-import com.example.sy43___ae_app.DataBase.ApiServices.Services.newService
+import android.Manifest
+import android.util.Log
+import androidx.annotation.RequiresPermission
+import androidx.compose.runtime.mutableStateOf
+import com.example.sy43___ae_app.Back.Network.ApiServices.ApiService
+import com.example.sy43___ae_app.Back.Network.ApiServices.ApiServiceImpl
+import com.example.sy43___ae_app.Back.Network.ApiServices.Services.clubService
+import com.example.sy43___ae_app.Back.Network.ApiServices.Services.newService
+import com.example.sy43___ae_app.Back.Network.NetworkManager
+import com.example.sy43___ae_app.MainActivity
 import io.ktor.client.HttpClient
+import io.ktor.client.HttpClientConfig
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.Instant
-import kotlinx.datetime.toLocalDateTime
-import java.time.LocalDateTime
 import kotlinx.serialization.json.Json
+import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.upsert
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZonedDateTime
-import kotlin.time.Duration
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
-
-class dataBaseManager(client: HttpClient) {
-    val apiService: ApiService = ApiServiceImpl(client)
+class dataBaseManager(
+    client: HttpClient,
+    val diskDB : Database,
+    val networkManager: NetworkManager
+    //, ramDB : Database
+) {
+    val apiService: ApiService = ApiServiceImpl(client, networkManager)
     val clubService = clubService(apiService)
     val newService = newService(apiService)
     val repository = Repository()
@@ -39,13 +43,24 @@ class dataBaseManager(client: HttpClient) {
         // On stocke l'instance ici pour y accéder partout
         var instance by mutableStateOf<dataBaseManager?>(null)
             private set
-
+        @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
         suspend fun init(activity: MainActivity) {
-            withContext(Dispatchers.IO) {
+            withContext(Dispatchers.IO)
+            {
                 Log.d("DB_Loggin", "init Start")
-                Database.connect("jdbc:h2:mem:AE;DB_CLOSE_DELAY=-1", driver = "org.h2.Driver")
+                // Dans ton code, remplace l'URL de connexion
 
-                transaction {
+                // Stock disque dur
+                val dbPath = activity.filesDir.absolutePath + "/ae_database"
+                val diskDB = Database.Companion.connect(
+                    "jdbc:h2:file:$dbPath;MODE=MYSQL;DB_CLOSE_DELAY=-1",
+                    driver = "org.h2.Driver"
+                )
+
+                // Stock en Ram
+                //val ramDB = Database.connect("jdbc:h2:mem:AE;DB_CLOSE_DELAY=-1", driver = "org.h2.Driver")
+
+                transaction(diskDB) {
                     SchemaUtils.create(
                         Clubs,
                         News,
@@ -59,7 +74,10 @@ class dataBaseManager(client: HttpClient) {
                         json(Json { ignoreUnknownKeys = true })
                     }
                 }
-                val newManager = dataBaseManager(client)
+
+                val networkManager = NetworkManager(activity.applicationContext)
+                val newManager = dataBaseManager(client, diskDB, networkManager)
+
                 newManager.refresh()
 
                 Log.d("DB_Loggin", "init End")
@@ -70,17 +88,36 @@ class dataBaseManager(client: HttpClient) {
         }
     }
 
+    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     suspend fun refresh(){
+
         newRefresh()
     }
 
-    suspend fun newRefresh(){
+    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
+    suspend fun newRefresh() {
         Log.d("DB_Loggin", "newRefresh Start")
         val now = LocalDate.now().toString()
-        val newDTO = newService.getNews(now)
         try {
             withContext(Dispatchers.IO) {
-                transaction {
+                var newDTO = newService.getNews(now);
+
+                if (newDTO.isEmpty()) {
+                    if (!networkManager.isNetworkAvailable()) {
+                        Log.d("DB_Loggin", "No internet")
+                        return@withContext
+                    }
+
+                    if (networkManager.hasActiveInternetConnection()) {
+                        newDTO = newService.getNews(now)
+                    }
+                }
+
+                if (newDTO.isEmpty()) {
+                    Log.d("DB_Loggin", "No news")
+                    return@withContext
+                }
+                transaction(diskDB) {
                     newDTO.forEach { result ->
                         Clubs.upsert {
                             it[id] = result.news.club.id
@@ -103,6 +140,10 @@ class dataBaseManager(client: HttpClient) {
                             it[id] = result.id
                             it[newsDetailId] = result.news.id
 
+                            it[lastUpdate] = ZonedDateTime.parse(now)
+                                .withZoneSameInstant(ZoneId.of("Europe/Paris"))
+                                .toLocalDateTime()
+
                             // Format date to french hours
                             it[startDate] = ZonedDateTime.parse(result.startDate)
                                 .withZoneSameInstant(ZoneId.of("Europe/Paris"))
@@ -110,7 +151,6 @@ class dataBaseManager(client: HttpClient) {
                             it[endDate] = ZonedDateTime.parse(result.endDate)
                                 .withZoneSameInstant(ZoneId.of("Europe/Paris"))
                                 .toLocalDateTime()
-
                         }
                     }
                 }

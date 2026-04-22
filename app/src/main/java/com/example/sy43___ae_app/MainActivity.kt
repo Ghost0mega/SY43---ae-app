@@ -1,6 +1,5 @@
 package com.example.sy43___ae_app
 
-import com.example.sy43___ae_app.DataBase.ApiServices.NetworkDTO.NewsDateResult
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
@@ -45,21 +44,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
-import com.example.sy43___ae_app.DataBase.ApiServices.ApiServiceImpl
-import com.example.sy43___ae_app.DataBase.ApiServices.Services.newService
-import com.example.sy43___ae_app.DataBase.FrontDTO.NewUI
-import com.example.sy43___ae_app.DataBase.dataBaseManager
+import com.example.sy43___ae_app.Back.FrontDTO.NewUI
+import com.example.sy43___ae_app.Back.DataBase.dataBaseManager
 import com.example.sy43___ae_app.ui.theme.SY43aeappTheme
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 
 
-import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
 
 private enum class BottomTab(val label: String, val icon: ImageVector) {
     HOME("Home", Icons.Filled.Home),
