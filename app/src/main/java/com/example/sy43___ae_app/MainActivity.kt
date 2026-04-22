@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,7 +24,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Newspaper
@@ -51,10 +51,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -365,6 +367,7 @@ private fun formatBadgeMonth(date: LocalDateTime): String {
 @Composable
 private fun MarkdownText(text: String, style: TextStyle, modifier: Modifier = Modifier, color: Color = style.color) {
     val context = LocalContext.current
+    var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
     val headerColor = MaterialTheme.colorScheme.primary
     val headerSizes = listOf(
         MaterialTheme.typography.headlineMedium.fontSize,
@@ -382,21 +385,25 @@ private fun MarkdownText(text: String, style: TextStyle, modifier: Modifier = Mo
         )
     }
 
-    ClickableText(
+    Text(
         text = annotatedText,
-        modifier = modifier,
-        style = style.copy(color = color),
-        onClick = { offset ->
-            annotatedText.getStringAnnotations(tag = "URL", start = offset, end = offset)
-                .firstOrNull()
-                ?.let { annotation ->
-                    runCatching {
-                        context.startActivity(
-                            Intent(Intent.ACTION_VIEW, annotation.item.toUri())
-                        )
+        modifier = modifier.pointerInput(annotatedText) {
+            detectTapGestures { position ->
+                val layoutResult = textLayoutResult ?: return@detectTapGestures
+                val offset = layoutResult.getOffsetForPosition(position)
+                annotatedText.getStringAnnotations(tag = "URL", start = offset, end = offset)
+                    .firstOrNull()
+                    ?.let { annotation ->
+                        runCatching {
+                            context.startActivity(
+                                Intent(Intent.ACTION_VIEW, annotation.item.toUri())
+                            )
+                        }
                     }
-                }
-        }
+            }
+        },
+        style = style.copy(color = color),
+        onTextLayout = { textLayoutResult = it }
     )
 }
 
