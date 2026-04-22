@@ -1,11 +1,13 @@
 package com.example.sy43___ae_app
 
+import android.Manifest
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.RequiresPermission
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
@@ -79,8 +81,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
-import com.example.sy43___ae_app.DataBase.FrontDTO.NewUI
-import com.example.sy43___ae_app.DataBase.dataBaseManager
+import com.example.sy43___ae_app.Back.FrontDTO.NewUI
+import com.example.sy43___ae_app.Back.DataBase.dataBaseManager
 import com.example.sy43___ae_app.ui.theme.SY43aeappTheme
 import coil.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
@@ -101,6 +103,8 @@ private enum class BottomTab(val label: String, val icon: ImageVector) {
 private val newsDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
 
 class MainActivity : ComponentActivity() {
+
+    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
