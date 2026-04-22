@@ -1,27 +1,31 @@
 package com.example.sy43___ae_app
 
-import com.example.sy43___ae_app.DataBase.ApiServices.NetworkDTO.NewsDateResult
-import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -41,26 +45,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
-import com.example.sy43___ae_app.DataBase.ApiServices.ApiServiceImpl
-import com.example.sy43___ae_app.DataBase.ApiServices.Services.newService
 import com.example.sy43___ae_app.DataBase.FrontDTO.NewUI
 import com.example.sy43___ae_app.DataBase.dataBaseManager
 import com.example.sy43___ae_app.ui.theme.SY43aeappTheme
 import coil.compose.AsyncImage
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-
-
-import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 private enum class BottomTab(val label: String, val icon: ImageVector) {
     NEWS("News", Icons.Filled.Home),
@@ -68,6 +65,8 @@ private enum class BottomTab(val label: String, val icon: ImageVector) {
     ClUBS("Clubs", Icons.Filled.Person),
     SETTINGS("Settings", Icons.Filled.Settings)
 }
+
+private val newsDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -122,7 +121,7 @@ private fun AppWithBottomNav(modifier: Modifier = Modifier) {
             .padding(innerPadding)
 
         when (BottomTab.entries[selectedTabIndex]) {
-            BottomTab.NEWS -> newsBlock(modifier = contentModifier, dataBaseManager.instance)
+            BottomTab.NEWS -> NewsScreen(modifier = contentModifier, dataBaseManager.instance)
             BottomTab.CALENDAR -> PlaceholderScreen(title = "Calendar", modifier = contentModifier)
             BottomTab.ClUBS -> PlaceholderScreen(title = "Profile", modifier = contentModifier)
             BottomTab.SETTINGS -> PlaceholderScreen(title = "Settings", modifier = contentModifier)
@@ -137,93 +136,137 @@ private fun PlaceholderScreen(title: String, modifier: Modifier = Modifier) {
     }
 }
 
-@SuppressLint("RememberReturnType")
 @Composable
-fun newsBlock(modifier: Modifier = Modifier, db: dataBaseManager?) {
+fun NewsScreen(modifier: Modifier = Modifier, db: dataBaseManager?) {
     var news by remember { mutableStateOf<List<NewUI>>(emptyList()) }
     var errorMessage by remember { mutableStateOf("") }
+    var hasLoaded by remember { mutableStateOf(false) }
 
     LaunchedEffect(db) {
-        if (db == null) return@LaunchedEffect // On attend que la DB soit prête
+        if (db == null) {
+            hasLoaded = false
+            return@LaunchedEffect
+        }
 
         try {
             val result = withContext(Dispatchers.IO) {
                 db.repository.getAllNews()
             }
             news = result
+            errorMessage = ""
         } catch (e: Exception) {
             Log.e("DB_DEBUG", "Erreur dans le LaunchedEffect", e)
             errorMessage = e.localizedMessage ?: "Erreur inconnue"
+            news = emptyList()
+        } finally {
+            hasLoaded = true
         }
     }
 
+    when {
+        db == null && !hasLoaded -> {
+            Box(
+                modifier = modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = "Chargement des nouvelles...", style = MaterialTheme.typography.titleMedium)
+            }
+        }
 
-    val colors = listOf(
-        Triple("Primary", MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.onPrimary),
-        Triple(
-            "Secondary",
-            MaterialTheme.colorScheme.secondary,
-            MaterialTheme.colorScheme.onSecondary
-        ),
-        Triple(
-            "Tertiary",
-            MaterialTheme.colorScheme.tertiary,
-            MaterialTheme.colorScheme.onTertiary
-        ),
-    )
+        errorMessage.isNotBlank() -> {
+            Box(
+                modifier = modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = errorMessage, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(top = 16.dp, bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-//        UrlImageTest(modifier = Modifier.size(160.dp))
+        news.isEmpty() -> {
+            Box(
+                modifier = modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = "Aucune nouvelle en base", style = MaterialTheme.typography.titleMedium)
+            }
+        }
 
-//        Text(
-//            text = "Résultat de l'API :",
-//            style = MaterialTheme.typography.titleMedium
-//        )
-//        Text(
-//            text = news.getOrNull(0)?.title ?: if (news.isEmpty()) "Aucune news en base" else errorMessage,
-//            style = MaterialTheme.typography.bodyMedium,
-//            textAlign = TextAlign.Center,
-//            modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp)
-//        )
-//        Text(
-//            text = news.getOrNull(0)?.summary ?: if (news.isEmpty()) "Aucune news en base" else errorMessage,
-//            style = MaterialTheme.typography.bodyMedium,
-//            textAlign = TextAlign.Center,
-//            modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp)
-//        )
-//
-//        Spacer(modifier = Modifier.height(32.dp))
-
-//        colors.forEach { (label, bgColor, textColor) ->
-//            Box(
-//                modifier = Modifier
-//                    .size(width = 200.dp, height = 60.dp)
-//                    .clip(RoundedCornerShape(12.dp))
-//                    .background(bgColor),
-//                contentAlignment = Alignment.Center
-//            ) {
-//                Text(
-//                    text = label,
-//                    color = textColor,
-//                    style = MaterialTheme.typography.labelLarge
-//                )
-//            }
-//        }
+        else -> {
+            LazyColumn(
+                modifier = modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(news) { item ->
+                    NewsCard(news = item)
+                }
+            }
+        }
     }
 }
 
 @Composable
-fun UrlImageTest(modifier: Modifier = Modifier) {
+private fun NewsCard(news: NewUI, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                UrlImage(
+                    url = news.logoUrl,
+                    contentDescription = "Logo de ${news.clubName}",
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                )
+
+                Column {
+                    Text(
+                        text = news.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = news.clubName,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            Text(
+                text = news.summary,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Text(
+                text = "Du ${formatNewsDate(news.startDate)} au ${formatNewsDate(news.endDate)}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+private fun formatNewsDate(date: LocalDateTime): String = date.format(newsDateFormatter)
+
+@Composable
+fun UrlImage(modifier: Modifier = Modifier, url: String, contentDescription: String? = null) {
     AsyncImage(
-        model = "https://ae.utbm.fr/static/core/img/logo_no_text.f7b33b3ef4d8.png",
-        contentDescription = "UTBM AE logo",
-        modifier = modifier
+        model = url,
+        contentDescription = contentDescription,
+        modifier = modifier,
+        contentScale = ContentScale.Crop
     )
 }
 
