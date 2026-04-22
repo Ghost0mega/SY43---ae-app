@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,7 +23,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -31,12 +33,17 @@ import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,6 +52,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -81,6 +89,7 @@ import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.time.LocalDate
 
 private enum class BottomTab(val label: String, val icon: ImageVector) {
     NEWS("News", Icons.Filled.Newspaper),
@@ -219,14 +228,82 @@ fun NewsScreen(modifier: Modifier = Modifier, db: dataBaseManager?) {
             val groupedNews = news
                 .groupBy { it.startDate.toLocalDate() }
                 .toSortedMap()
+                .entries
+                .toList()
 
-            LazyColumn(
-                modifier = modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(groupedNews.entries.toList()) { dayGroup ->
-                    NewsDayCard(dayNews = dayGroup.value)
+            var expanded by remember { mutableStateOf(false) }
+            var selectedDate by remember(groupedNews) { mutableStateOf(groupedNews.first().key) }
+            val listState = rememberLazyListState()
+            val coroutineScope = rememberCoroutineScope()
+
+            LaunchedEffect(groupedNews) {
+                if (groupedNews.none { it.key == selectedDate }) {
+                    selectedDate = groupedNews.first().key
+                }
+            }
+
+            Column(modifier = modifier.fillMaxSize()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { expanded = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = MaterialTheme.colorScheme.tertiary,
+                            contentColor = MaterialTheme.colorScheme.onTertiary
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(text = "Aller au ${formatJumpDate(selectedDate)}")
+                            Icon(
+                                imageVector = Icons.Filled.CalendarMonth,
+                                contentDescription = "Choisir une date"
+                            )
+                        }
+                    }
+
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false },
+                        modifier = Modifier.fillMaxWidth(0.92f),
+                        containerColor = MaterialTheme.colorScheme.tertiary
+                    ) {
+                        groupedNews.forEachIndexed { index, dayGroup ->
+                            DropdownMenuItem(
+                                text = { Text(formatJumpDate(dayGroup.key)) },
+                                colors = MenuDefaults.itemColors(textColor = MaterialTheme.colorScheme.onTertiary),
+                                onClick = {
+                                    selectedDate = dayGroup.key
+                                    expanded = false
+                                    coroutineScope.launch {
+                                        listState.animateScrollToItem(index)
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    itemsIndexed(
+                        items = groupedNews,
+                        key = { _, dayGroup -> dayGroup.key.toString() }
+                    ) { _, dayGroup ->
+                        NewsDayCard(dayNews = dayGroup.value)
+                    }
                 }
             }
         }
@@ -291,12 +368,12 @@ private fun NewsEventContent(news: NewUI) {
                 MarkdownText(
                     text = news.title,
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.secondary
                 )
                 Text(
                     text = news.clubName,
                     style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.secondary
                 )
             }
         }
@@ -332,19 +409,19 @@ private fun DateBadge(startDate: LocalDateTime, modifier: Modifier = Modifier) {
             Text(
                 text = formatBadgeWeekday(startDate),
                 style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = MaterialTheme.colorScheme.onSecondary,
                 textAlign = TextAlign.Center
             )
             Text(
                 text = formatBadgeDay(startDate),
                 style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = MaterialTheme.colorScheme.onSecondary,
                 textAlign = TextAlign.Center
             )
             Text(
                 text = formatBadgeMonth(startDate),
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = MaterialTheme.colorScheme.onSecondary,
                 textAlign = TextAlign.Center
             )
         }
@@ -365,11 +442,16 @@ private fun formatBadgeMonth(date: LocalDateTime): String {
     return date.format(pattern).replace(".", "").uppercase(Locale.FRENCH)
 }
 
+private fun formatJumpDate(date: LocalDate): String {
+    val pattern = DateTimeFormatter.ofPattern("EEE dd MMM yyyy", Locale.FRENCH)
+    return date.format(pattern).replace(".", "").replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.FRENCH) else it.toString() }
+}
+
 @Composable
 private fun MarkdownText(text: String, style: TextStyle, modifier: Modifier = Modifier, color: Color = style.color) {
     val context = LocalContext.current
     var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
-    val headerColor = MaterialTheme.colorScheme.primary
+    val headerColor = MaterialTheme.colorScheme.secondary
     val headerSizes = listOf(
         MaterialTheme.typography.headlineMedium.fontSize,
         MaterialTheme.typography.titleLarge.fontSize,
