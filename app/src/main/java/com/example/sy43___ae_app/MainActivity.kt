@@ -63,9 +63,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 
 private enum class BottomTab(val label: String, val icon: ImageVector) {
-    HOME("Home", Icons.Filled.Home),
+    NEWS("News", Icons.Filled.Home),
     CALENDAR("Calendar", Icons.Filled.CalendarMonth),
-    PROFILE("Profile", Icons.Filled.Person),
+    ClUBS("Clubs", Icons.Filled.Person),
     SETTINGS("Settings", Icons.Filled.Settings)
 }
 
@@ -88,7 +88,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun AppWithBottomNav(modifier: Modifier = Modifier) {
-    var selectedTabIndex by rememberSaveable { mutableIntStateOf(BottomTab.HOME.ordinal) }
+    var selectedTabIndex by rememberSaveable { mutableIntStateOf(BottomTab.NEWS.ordinal) }
 
     Scaffold(
         modifier = modifier,
@@ -122,9 +122,9 @@ private fun AppWithBottomNav(modifier: Modifier = Modifier) {
             .padding(innerPadding)
 
         when (BottomTab.entries[selectedTabIndex]) {
-            BottomTab.HOME -> newsBlock(modifier = contentModifier, dataBaseManager.instance)
+            BottomTab.NEWS -> newsBlock(modifier = contentModifier, dataBaseManager.instance)
             BottomTab.CALENDAR -> PlaceholderScreen(title = "Calendar", modifier = contentModifier)
-            BottomTab.PROFILE -> PlaceholderScreen(title = "Profile", modifier = contentModifier)
+            BottomTab.ClUBS -> PlaceholderScreen(title = "Profile", modifier = contentModifier)
             BottomTab.SETTINGS -> PlaceholderScreen(title = "Settings", modifier = contentModifier)
         }
     }
@@ -179,42 +179,42 @@ fun newsBlock(modifier: Modifier = Modifier, db: dataBaseManager?) {
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        UrlImageTest(modifier = Modifier.size(160.dp))
+//        UrlImageTest(modifier = Modifier.size(160.dp))
 
-        Text(
-            text = "Résultat de l'API :",
-            style = MaterialTheme.typography.titleMedium
-        )
-        Text(
-            text = news.getOrNull(0)?.title ?: if (news.isEmpty()) "Aucune news en base" else errorMessage,
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp)
-        )
-        Text(
-            text = news.getOrNull(0)?.summary ?: if (news.isEmpty()) "Aucune news en base" else errorMessage,
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp)
-        )
+//        Text(
+//            text = "Résultat de l'API :",
+//            style = MaterialTheme.typography.titleMedium
+//        )
+//        Text(
+//            text = news.getOrNull(0)?.title ?: if (news.isEmpty()) "Aucune news en base" else errorMessage,
+//            style = MaterialTheme.typography.bodyMedium,
+//            textAlign = TextAlign.Center,
+//            modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp)
+//        )
+//        Text(
+//            text = news.getOrNull(0)?.summary ?: if (news.isEmpty()) "Aucune news en base" else errorMessage,
+//            style = MaterialTheme.typography.bodyMedium,
+//            textAlign = TextAlign.Center,
+//            modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp)
+//        )
+//
+//        Spacer(modifier = Modifier.height(32.dp))
 
-        Spacer(modifier = Modifier.height(32.dp))
-
-        colors.forEach { (label, bgColor, textColor) ->
-            Box(
-                modifier = Modifier
-                    .size(width = 200.dp, height = 60.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(bgColor),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = label,
-                    color = textColor,
-                    style = MaterialTheme.typography.labelLarge
-                )
-            }
-        }
+//        colors.forEach { (label, bgColor, textColor) ->
+//            Box(
+//                modifier = Modifier
+//                    .size(width = 200.dp, height = 60.dp)
+//                    .clip(RoundedCornerShape(12.dp))
+//                    .background(bgColor),
+//                contentAlignment = Alignment.Center
+//            ) {
+//                Text(
+//                    text = label,
+//                    color = textColor,
+//                    style = MaterialTheme.typography.labelLarge
+//                )
+//            }
+//        }
     }
 }
 
