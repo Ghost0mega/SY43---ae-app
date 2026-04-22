@@ -55,6 +55,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.SpanStyle
@@ -575,12 +576,32 @@ private fun AnnotatedString.Builder.appendInlineMarkdown(text: String) {
 
 @Composable
 fun UrlImage(modifier: Modifier = Modifier, url: String, contentDescription: String? = null) {
+    val fallbackPainter = painterResource(id = R.drawable.ic_launcher_foreground)
+
     AsyncImage(
-        model = url,
+        model = normalizeImageUrl(url),
         contentDescription = contentDescription,
         modifier = modifier,
-        contentScale = ContentScale.Crop
+        contentScale = ContentScale.Fit,
+        placeholder = fallbackPainter,
+        error = fallbackPainter,
+        fallback = fallbackPainter
     )
+}
+
+private fun normalizeImageUrl(rawUrl: String): String? {
+    val url = rawUrl.trim()
+    if (url.isEmpty()) return null
+    if (url.equals("null", ignoreCase = true) || url.equals("none", ignoreCase = true) || url.equals("n/a", ignoreCase = true)) {
+        return null
+    }
+
+    return when {
+        url.startsWith("https://") || url.startsWith("http://") -> url
+        url.startsWith("//") -> "https:$url"
+        url.startsWith("/") -> "https://ae.utbm.fr$url"
+        else -> null
+    }
 }
 
 @Preview(showBackground = true)
