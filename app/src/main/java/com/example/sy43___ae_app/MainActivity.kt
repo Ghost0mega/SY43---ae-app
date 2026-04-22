@@ -21,8 +21,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Newspaper
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -60,9 +60,9 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 private enum class BottomTab(val label: String, val icon: ImageVector) {
-    NEWS("News", Icons.Filled.Home),
+    NEWS("News", Icons.Filled.Newspaper),
     CALENDAR("Calendar", Icons.Filled.CalendarMonth),
-    ClUBS("Clubs", Icons.Filled.Person),
+    ClUBS("Clubs", Icons.Filled.Groups),
     SETTINGS("Settings", Icons.Filled.Settings)
 }
 
@@ -138,6 +138,7 @@ private fun PlaceholderScreen(title: String, modifier: Modifier = Modifier) {
 
 @Composable
 fun NewsScreen(modifier: Modifier = Modifier, db: dataBaseManager?) {
+
     var news by remember { mutableStateOf<List<NewUI>>(emptyList()) }
     var errorMessage by remember { mutableStateOf("") }
     var hasLoaded by remember { mutableStateOf(false) }
@@ -152,7 +153,7 @@ fun NewsScreen(modifier: Modifier = Modifier, db: dataBaseManager?) {
             val result = withContext(Dispatchers.IO) {
                 db.repository.getAllNews()
             }
-            news = result
+            news = result.sortedBy { it.startDate }
             errorMessage = ""
         } catch (e: Exception) {
             Log.e("DB_DEBUG", "Erreur dans le LaunchedEffect", e)
