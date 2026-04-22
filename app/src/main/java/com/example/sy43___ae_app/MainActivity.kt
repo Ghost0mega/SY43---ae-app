@@ -6,17 +6,20 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,6 +31,7 @@ import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -57,6 +61,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -72,6 +77,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 private enum class BottomTab(val label: String, val icon: ImageVector) {
     NEWS("News", Icons.Filled.Newspaper),
@@ -207,13 +213,17 @@ fun NewsScreen(modifier: Modifier = Modifier, db: dataBaseManager?) {
         }
 
         else -> {
+            val groupedNews = news
+                .groupBy { it.startDate.toLocalDate() }
+                .toSortedMap()
+
             LazyColumn(
                 modifier = modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(news) { item ->
-                    NewsCard(news = item)
+                items(groupedNews.entries.toList()) { dayGroup ->
+                    NewsDayCard(dayNews = dayGroup.value)
                 }
             }
         }
@@ -221,53 +231,118 @@ fun NewsScreen(modifier: Modifier = Modifier, db: dataBaseManager?) {
 }
 
 @Composable
-private fun NewsCard(news: NewUI, modifier: Modifier = Modifier) {
+private fun NewsDayCard(dayNews: List<NewUI>, modifier: Modifier = Modifier) {
+    if (dayNews.isEmpty()) return
+
+    val sortedDayNews = remember(dayNews) { dayNews.sortedBy { it.startDate } }
+
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min),
+            verticalAlignment = Alignment.Top
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                UrlImage(
-                    url = news.logoUrl,
-                    contentDescription = "Logo de ${news.clubName}",
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                )
-
-                Column {
-                    MarkdownText(
-                        text = news.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = news.clubName,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-
-            MarkdownText(
-                text = news.summary,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            DateBadge(
+                startDate = sortedDayNews.first().startDate,
+                modifier = Modifier.fillMaxHeight()
             )
 
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                sortedDayNews.forEachIndexed { index, news ->
+                    NewsEventContent(news = news)
+                    if (index < sortedDayNews.lastIndex) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NewsEventContent(news: NewUI) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            UrlImage(
+                url = news.logoUrl,
+                contentDescription = "Logo de ${news.clubName}",
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(6.dp))
+            )
+
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                MarkdownText(
+                    text = news.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = news.clubName,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+
+        Text(
+            text = "${formatNewsDate(news.startDate)} - ${formatNewsDate(news.endDate)}",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        MarkdownText(
+            text = news.summary,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+@Composable
+private fun DateBadge(startDate: LocalDateTime, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp))
+            .background(MaterialTheme.colorScheme.primary)
+            .padding(horizontal = 8.dp, vertical = 12.dp)
+            .width(56.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
             Text(
-                text = "Du ${formatNewsDate(news.startDate)} au ${formatNewsDate(news.endDate)}",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = formatBadgeWeekday(startDate),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onPrimary,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = formatBadgeDay(startDate),
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onPrimary,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = formatBadgeMonth(startDate),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onPrimary,
+                textAlign = TextAlign.Center
             )
         }
     }
@@ -275,13 +350,20 @@ private fun NewsCard(news: NewUI, modifier: Modifier = Modifier) {
 
 private fun formatNewsDate(date: LocalDateTime): String = date.format(newsDateFormatter)
 
+private fun formatBadgeWeekday(date: LocalDateTime): String {
+    val pattern = DateTimeFormatter.ofPattern("EEE", Locale.FRENCH)
+    return date.format(pattern).replace(".", "").uppercase(Locale.FRENCH)
+}
+
+private fun formatBadgeDay(date: LocalDateTime): String = date.format(DateTimeFormatter.ofPattern("dd"))
+
+private fun formatBadgeMonth(date: LocalDateTime): String {
+    val pattern = DateTimeFormatter.ofPattern("MMM", Locale.FRENCH)
+    return date.format(pattern).replace(".", "").uppercase(Locale.FRENCH)
+}
+
 @Composable
-private fun MarkdownText(
-    text: String,
-    style: TextStyle,
-    modifier: Modifier = Modifier,
-    color: Color = style.color,
-) {
+private fun MarkdownText(text: String, style: TextStyle, modifier: Modifier = Modifier, color: Color = style.color) {
     val context = LocalContext.current
     val headerColor = MaterialTheme.colorScheme.primary
     val headerSizes = listOf(
@@ -318,11 +400,7 @@ private fun MarkdownText(
     )
 }
 
-private fun markdownToAnnotatedString(
-    markdown: String,
-    headerColor: Color,
-    headerSizes: List<TextUnit>,
-): AnnotatedString = buildAnnotatedString {
+private fun markdownToAnnotatedString(markdown: String, headerColor: Color, headerSizes: List<TextUnit>): AnnotatedString = buildAnnotatedString {
     val lines = markdown.replace("\r\n", "\n").split('\n')
 
     lines.forEachIndexed { index, line ->
