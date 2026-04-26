@@ -27,7 +27,9 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import kotlinx.datetime.LocalTime
 import org.jetbrains.exposed.v1.jdbc.replace
+import java.time.LocalDateTime
 
 class dataBaseManager(
     client: HttpClient,
@@ -63,6 +65,7 @@ class dataBaseManager(
 
                 transaction(diskDB) {
                     SchemaUtils.create(
+                        DbMetadata,
                         Clubs,
                         News,
                         NewsPagination,
@@ -152,9 +155,7 @@ class dataBaseManager(
 
                         DbMetadata.replace {
                             it[key] = "New"
-                            it[lastUpdate] = ZonedDateTime.parse(now)
-                                .withZoneSameInstant(ZoneId.of("Europe/Paris"))
-                                .toLocalDateTime()
+                            it[lastUpdate] = LocalDateTime.now()
                         }
                     }
                 }
