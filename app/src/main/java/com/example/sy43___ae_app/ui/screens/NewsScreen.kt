@@ -1,0 +1,366 @@
+package com.example.sy43___ae_app.ui.screens
+
+import android.util.Log
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuDefaults
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import com.example.sy43___ae_app.Back.DataBase.dataBaseManager
+import com.example.sy43___ae_app.Back.FrontDTO.NewUI
+import com.example.sy43___ae_app.ui.utils.MarkdownText
+import com.example.sy43___ae_app.ui.utils.UrlImage
+import com.example.sy43___ae_app.ui.utils.formatBadgeDay
+import com.example.sy43___ae_app.ui.utils.formatBadgeMonth
+import com.example.sy43___ae_app.ui.utils.formatBadgeWeekday
+import com.example.sy43___ae_app.ui.utils.formatJumpDate
+import com.example.sy43___ae_app.ui.utils.formatNewsDate
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.time.LocalDate
+import java.time.LocalDateTime
+
+/**
+ * NewsScreen - Displays all news events grouped by date with a date selector
+ *
+ * Features:
+ * - Groups news by date with expandable date selector
+ * - Shows each date's news in a card with time badge
+ * - Supports markdown text rendering in titles and summaries
+ * - Displays club logos and event information
+ * - Handles loading, error, and empty states
+ */
+@Composable
+fun NewsScreen(modifier: Modifier = Modifier, db: dataBaseManager?) {
+
+    var news by remember { mutableStateOf<List<NewUI>>(emptyList()) }
+    var errorMessage by remember { mutableStateOf("") }
+    var hasLoaded by remember { mutableStateOf(false) }
+
+    // Load all news from database on initialization
+    LaunchedEffect(db) {
+        if (db == null) {
+            hasLoaded = false
+            return@LaunchedEffect
+        }
+
+        try {
+            val result = withContext(Dispatchers.IO) {
+                db.repository.getAllNews()
+            }
+            news = result.sortedBy { it.startDate }
+            errorMessage = ""
+        } catch (e: Exception) {
+            Log.e("DB_DEBUG", "Erreur dans le LaunchedEffect", e)
+            errorMessage = e.localizedMessage ?: "Erreur inconnue"
+            news = emptyList()
+        } finally {
+            hasLoaded = true
+        }
+    }
+
+    when {
+        // Loading state
+        db == null && !hasLoaded -> {
+            Box(
+                modifier = modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = "Chargement des nouvelles...", style = MaterialTheme.typography.titleMedium)
+            }
+        }
+
+        // Error state
+        errorMessage.isNotBlank() -> {
+            Box(
+                modifier = modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = errorMessage, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+
+        // Empty state
+        news.isEmpty() -> {
+            Box(
+                modifier = modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = "Aucune nouvelle en base", style = MaterialTheme.typography.titleMedium)
+            }
+        }
+
+        // Loaded state - display news
+        else -> {
+            // Group news by date for display
+            val groupedNews = news
+                .groupBy { it.startDate.toLocalDate() }
+                .toSortedMap()
+                .entries
+                .toList()
+
+            var expanded by remember { mutableStateOf(false) }
+            var selectedDate by remember(groupedNews) { mutableStateOf(groupedNews.first().key) }
+            val listState = rememberLazyListState()
+            val coroutineScope = rememberCoroutineScope()
+
+            LaunchedEffect(groupedNews) {
+                if (groupedNews.none { it.key == selectedDate }) {
+                    selectedDate = groupedNews.first().key
+                }
+            }
+
+            Column(modifier = modifier.fillMaxSize()) {
+                // Date selector dropdown
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { expanded = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = MaterialTheme.colorScheme.tertiary,
+                            contentColor = MaterialTheme.colorScheme.onTertiary
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(text = "Aller au ${formatJumpDate(selectedDate)}")
+                            Icon(
+                                imageVector = Icons.Filled.CalendarMonth,
+                                contentDescription = "Choisir une date"
+                            )
+                        }
+                    }
+
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false },
+                        modifier = Modifier.fillMaxWidth(0.92f),
+                        containerColor = MaterialTheme.colorScheme.tertiary
+                    ) {
+                        groupedNews.forEachIndexed { index, dayGroup ->
+                            DropdownMenuItem(
+                                text = { Text(formatJumpDate(dayGroup.key)) },
+                                colors = MenuDefaults.itemColors(textColor = MaterialTheme.colorScheme.onTertiary),
+                                onClick = {
+                                    selectedDate = dayGroup.key
+                                    expanded = false
+                                    coroutineScope.launch {
+                                        listState.animateScrollToItem(index)
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+
+                // Scrollable list of news grouped by date
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    itemsIndexed(
+                        items = groupedNews,
+                        key = { _, dayGroup -> dayGroup.key.toString() }
+                    ) { _, dayGroup ->
+                        NewsDayCard(dayNews = dayGroup.value)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * NewsDayCard - A card showing all news for a single day
+ * Includes a colored date badge and event details
+ */
+@Composable
+private fun NewsDayCard(dayNews: List<NewUI>, modifier: Modifier = Modifier) {
+    if (dayNews.isEmpty()) return
+
+    val sortedDayNews = remember(dayNews) { dayNews.sortedBy { it.startDate } }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min),
+            verticalAlignment = Alignment.Top
+        ) {
+            // Left side: Date badge with day/date/month
+            DateBadge(
+                startDate = sortedDayNews.first().startDate,
+                modifier = Modifier.fillMaxHeight()
+            )
+
+            // Right side: Event details
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                sortedDayNews.forEachIndexed { index, news ->
+                    NewsEventContent(news = news)
+                    if (index < sortedDayNews.lastIndex) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * NewsEventContent - Details of a single news event
+ * Shows: club logo, title, club name, date range, and summary
+ */
+@Composable
+private fun NewsEventContent(news: NewUI) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // Club logo
+            UrlImage(
+                url = news.logoUrl,
+                contentDescription = "Logo de ${news.clubName}",
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(6.dp))
+            )
+
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                // Event title (with markdown support)
+                MarkdownText(
+                    text = news.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+                // Club name
+                Text(
+                    text = news.clubName,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+            }
+        }
+
+        // Date range
+        Text(
+            text = "${formatNewsDate(news.startDate)} - ${formatNewsDate(news.endDate)}",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        // Summary (with markdown support)
+        MarkdownText(
+            text = news.summary,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+/**
+ * DateBadge - Colored badge showing weekday, day, and month
+ * Used as a visual indicator for date and time
+ * Example: "LUN" / "04" / "JUN"
+ */
+@Composable
+private fun DateBadge(startDate: LocalDateTime, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp))
+            .background(MaterialTheme.colorScheme.primary)
+            .padding(horizontal = 8.dp, vertical = 12.dp)
+            .width(56.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            // Weekday (MON, TUE, etc.)
+            Text(
+                text = formatBadgeWeekday(startDate),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSecondary,
+                textAlign = TextAlign.Center
+            )
+            // Day number
+            Text(
+                text = formatBadgeDay(startDate),
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSecondary,
+                textAlign = TextAlign.Center
+            )
+            // Month
+            Text(
+                text = formatBadgeMonth(startDate),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSecondary,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+
+
