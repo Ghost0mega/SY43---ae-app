@@ -33,6 +33,7 @@ import com.example.sy43___ae_app.Back.DataBase.dataBaseManager
 import com.example.sy43___ae_app.ui.theme.SY43aeappTheme
 import com.example.sy43___ae_app.ui.screens.CalendarScreen
 import com.example.sy43___ae_app.ui.screens.NewsScreen
+import com.example.sy43___ae_app.ui.screens.ClubsScreen
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.tooling.preview.Preview
@@ -127,7 +128,7 @@ private fun AppWithBottomNav(modifier: Modifier = Modifier) {
         when (BottomTab.entries[selectedTabIndex]) {
             BottomTab.NEWS -> NewsScreen(modifier = contentModifier, dataBaseManager.instance)
             BottomTab.CALENDAR -> CalendarScreen(modifier = contentModifier, dataBaseManager.instance)
-            BottomTab.CLUBS -> PlaceholderScreen(title = "Clubs", modifier = contentModifier)
+            BottomTab.CLUBS -> ClubsScreen(modifier = contentModifier, dataBaseManager.instance)
             BottomTab.SETTINGS -> PlaceholderScreen(title = "Settings", modifier = contentModifier)
         }
     }
