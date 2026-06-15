@@ -92,6 +92,7 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.time.LocalDate
+import java.time.YearMonth
 
 private enum class BottomTab(val label: String, val icon: ImageVector) {
     NEWS("News", Icons.Filled.Newspaper),
@@ -156,12 +157,12 @@ private fun AppWithBottomNav(modifier: Modifier = Modifier) {
             .fillMaxSize()
             .padding(innerPadding)
 
-        when (BottomTab.entries[selectedTabIndex]) {
-            BottomTab.NEWS -> NewsScreen(modifier = contentModifier, dataBaseManager.instance)
-            BottomTab.CALENDAR -> PlaceholderScreen(title = "Calendar", modifier = contentModifier)
-            BottomTab.ClUBS -> PlaceholderScreen(title = "Profile", modifier = contentModifier)
-            BottomTab.SETTINGS -> PlaceholderScreen(title = "Settings", modifier = contentModifier)
-        }
+         when (BottomTab.entries[selectedTabIndex]) {
+             BottomTab.NEWS -> NewsScreen(modifier = contentModifier, dataBaseManager.instance)
+             BottomTab.CALENDAR -> CalendarScreen(modifier = contentModifier, dataBaseManager.instance)
+             BottomTab.ClUBS -> PlaceholderScreen(title = "Clubs", modifier = contentModifier)
+             BottomTab.SETTINGS -> PlaceholderScreen(title = "Settings", modifier = contentModifier)
+         }
     }
 }
 
@@ -170,6 +171,293 @@ private fun PlaceholderScreen(title: String, modifier: Modifier = Modifier) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Text(text = "$title screen", style = MaterialTheme.typography.titleMedium)
     }
+}
+
+@Composable
+fun CalendarScreen(modifier: Modifier = Modifier, db: dataBaseManager?) {
+    var news by remember { mutableStateOf<List<NewUI>>(emptyList()) }
+    var errorMessage by remember { mutableStateOf("") }
+    var hasLoaded by remember { mutableStateOf(false) }
+    var currentMonth by remember { mutableStateOf(YearMonth.now()) }
+
+    LaunchedEffect(db) {
+        if (db == null) {
+            hasLoaded = false
+            return@LaunchedEffect
+        }
+
+        try {
+            val result = withContext(Dispatchers.IO) {
+                db.repository.getAllNews()
+            }
+            news = result
+            errorMessage = ""
+        } catch (e: Exception) {
+            Log.e("CALENDAR_DEBUG", "Erreur dans le CalendarScreen", e)
+            errorMessage = e.localizedMessage ?: "Erreur inconnue"
+            news = emptyList()
+        } finally {
+            hasLoaded = true
+        }
+    }
+
+    when {
+        db == null && !hasLoaded -> {
+            Box(
+                modifier = modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = "Chargement du calendrier...", style = MaterialTheme.typography.titleMedium)
+            }
+        }
+
+        errorMessage.isNotBlank() -> {
+            Box(
+                modifier = modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = errorMessage, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+
+        else -> {
+            Column(modifier = modifier.fillMaxSize()) {
+                // Calendar header with month navigation
+                CalendarHeader(
+                    currentMonth = currentMonth,
+                    onPreviousMonth = { currentMonth = currentMonth.minusMonths(1) },
+                    onNextMonth = { currentMonth = currentMonth.plusMonths(1) }
+                )
+
+                // Calendar grid and events
+                CalendarGridWithEvents(
+                    month = currentMonth,
+                    events = news,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 8.dp, vertical = 8.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CalendarHeader(
+    currentMonth: YearMonth,
+    onPreviousMonth: () -> Unit,
+    onNextMonth: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.tertiary)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedButton(
+                onClick = onPreviousMonth,
+                modifier = Modifier.size(40.dp),
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.1f),
+                    contentColor = MaterialTheme.colorScheme.onTertiary
+                ),
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Text("<", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onTertiary)
+            }
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = formatMonthFrench(currentMonth),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onTertiary,
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            OutlinedButton(
+                onClick = onNextMonth,
+                modifier = Modifier.size(40.dp),
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = MaterialTheme.colorScheme.onTertiary.copy(alpha = 0.1f),
+                    contentColor = MaterialTheme.colorScheme.onTertiary
+                ),
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Text(">", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onTertiary)
+            }
+        }
+    }
+}
+
+@Composable
+private fun CalendarGridWithEvents(
+    month: YearMonth,
+    events: List<NewUI>,
+    modifier: Modifier = Modifier
+) {
+    // Create a map of date to events for quick lookup
+    val eventsByDate = remember(events, month) {
+        events
+            .filter { event ->
+                val eventMonth = YearMonth.from(event.startDate)
+                eventMonth == month
+            }
+            .groupBy { it.startDate.toLocalDate() }
+            .toSortedMap()
+    }
+
+    // Get all dates that have events in this month
+    val datesWithEvents = remember(eventsByDate) {
+        eventsByDate.keys.sorted()
+    }
+
+    LazyColumn(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        items(datesWithEvents.size) { index ->
+            val date = datesWithEvents[index]
+            val dayEvents = eventsByDate[date] ?: emptyList()
+            CalendarDateSection(date = date, events = dayEvents)
+        }
+    }
+}
+
+@Composable
+private fun CalendarDateSection(date: LocalDate, events: List<NewUI>) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Date header with day name
+        DateHeader(date = date)
+
+        // Events for this date
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    color = MaterialTheme.colorScheme.surface,
+                    shape = RoundedCornerShape(8.dp)
+                )
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            val sortedEvents = events.sortedBy { it.startDate }
+            sortedEvents.forEachIndexed { index, event ->
+                EventRow(event = event)
+                if (index < sortedEvents.lastIndex) {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
+                        thickness = 1.dp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DateHeader(date: LocalDate) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(4.dp)
+            )
+            .padding(12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Date (e.g., "4 juin 2026")
+        Text(
+            text = formatDateFrench(date),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.secondary,
+            fontWeight = FontWeight.Bold
+        )
+
+        // Day name (e.g., "jeudi")
+        Text(
+            text = formatDayNameFrench(date),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.secondary
+        )
+    }
+}
+
+@Composable
+private fun EventRow(event: NewUI) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Time range
+        Column(
+            modifier = Modifier.width(100.dp),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "${event.startDate.format(DateTimeFormatter.ofPattern("HH:mm"))} - ${event.endDate.format(DateTimeFormatter.ofPattern("HH:mm"))}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+
+        // Bullet point
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.primary,
+                    shape = RoundedCornerShape(50)
+                )
+        )
+
+        // Event title
+        Text(
+            text = event.title,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+private fun formatDateFrench(date: LocalDate): String {
+    val dayOfMonth = date.dayOfMonth
+    val monthFormatter = DateTimeFormatter.ofPattern("MMMM", Locale.FRENCH)
+    val month = date.format(monthFormatter)
+    val year = date.year
+    return "$dayOfMonth $month $year"
+}
+
+private fun formatDayNameFrench(date: LocalDate): String {
+    val dayFormatter = DateTimeFormatter.ofPattern("EEEE", Locale.FRENCH)
+    return date.format(dayFormatter)
+}
+
+private fun formatMonthFrench(yearMonth: YearMonth): String {
+    val monthFormatter = DateTimeFormatter.ofPattern("MMMM", Locale.FRENCH)
+    val month = yearMonth.format(monthFormatter)
+    return "${month.uppercase()} ${yearMonth.year}"
 }
 
 @Composable
