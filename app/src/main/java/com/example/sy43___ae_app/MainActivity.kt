@@ -9,10 +9,10 @@ import androidx.annotation.RequiresPermission
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -31,9 +31,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.lifecycleScope
 import com.example.sy43___ae_app.Back.DataBase.dataBaseManager
 import com.example.sy43___ae_app.ui.theme.SY43aeappTheme
+import android.content.pm.PackageManager
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.example.sy43___ae_app.ui.screens.CalendarScreen
 import com.example.sy43___ae_app.ui.screens.NewsScreen
 import com.example.sy43___ae_app.ui.screens.ClubsScreen
+import com.example.sy43___ae_app.ui.screens.FollowedNewsScreen
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.tooling.preview.Preview
@@ -46,7 +50,7 @@ private enum class BottomTab(val label: String, val icon: ImageVector) {
     NEWS("News", Icons.Filled.Newspaper),
     CALENDAR("Calendar", Icons.Filled.CalendarMonth),
     CLUBS("Clubs", Icons.Filled.Groups),
-    SETTINGS("Settings", Icons.Filled.Settings)
+    FOLLOWED("Followed", Icons.Filled.Star)
 }
 
 /**
@@ -62,6 +66,13 @@ class MainActivity : ComponentActivity() {
     @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Request notification permission for Android 13+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 101)
+            }
+        }
 
         // Initialize database asynchronously
         lifecycleScope.launch {
@@ -129,7 +140,7 @@ private fun AppWithBottomNav(modifier: Modifier = Modifier) {
             BottomTab.NEWS -> NewsScreen(modifier = contentModifier, dataBaseManager.instance)
             BottomTab.CALENDAR -> CalendarScreen(modifier = contentModifier, dataBaseManager.instance)
             BottomTab.CLUBS -> ClubsScreen(modifier = contentModifier, dataBaseManager.instance)
-            BottomTab.SETTINGS -> PlaceholderScreen(title = "Settings", modifier = contentModifier)
+            BottomTab.FOLLOWED -> FollowedNewsScreen(modifier = contentModifier, dataBaseManager.instance)
         }
     }
 }

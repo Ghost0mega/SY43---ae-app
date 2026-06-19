@@ -46,6 +46,7 @@ object News : Table("news_details") {
     val title = varchar("title", MAX_VARCHAR_LENGTH)
     val summary = varchar("summary", MAX_TEXT_LENGTH)
     val isPublished = bool("is_published").default(false)
+    val isFollowed = bool("is_followed").default(false)
     val url = varchar("url", MAX_URL_LENGTH)
 
     // Clé étrangère vers le club qui publie la news

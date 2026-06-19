@@ -10,6 +10,8 @@ import kotlinx.serialization.json.Json
 
 class newService(private val apiService: ApiService) {
 
+    private val json = Json { ignoreUnknownKeys = true }
+
     /*
      * Date format years-month-day
      *
@@ -22,7 +24,7 @@ class newService(private val apiService: ApiService) {
 
         return try {
             if (apiResponse != null) {
-                Json.decodeFromString<NewsPaginationResponse>(apiResponse).results
+                json.decodeFromString<NewsPaginationResponse>(apiResponse).results
             } else {
                 emptyList()
             }

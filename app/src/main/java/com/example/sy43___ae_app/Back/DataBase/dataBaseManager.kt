@@ -9,6 +9,7 @@ import com.example.sy43___ae_app.Back.Network.ApiServices.ApiServiceImpl
 import com.example.sy43___ae_app.Back.Network.ApiServices.Services.clubService
 import com.example.sy43___ae_app.Back.Network.ApiServices.Services.newService
 import com.example.sy43___ae_app.Back.Network.NetworkManager
+import com.example.sy43___ae_app.Back.Notification.NotificationManager
 import com.example.sy43___ae_app.MainActivity
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
@@ -34,7 +35,8 @@ import java.time.LocalDateTime
 class dataBaseManager(
     client: HttpClient,
     val diskDB : Database,
-    val networkManager: NetworkManager
+    val networkManager: NetworkManager,
+    val notificationManager: NotificationManager
     //, ramDB : Database
 ) {
     val apiService: ApiService = ApiServiceImpl(client, networkManager)
@@ -71,6 +73,52 @@ class dataBaseManager(
                         NewsPagination,
                         Members
                     )
+                    // Manual migration for the new column as createMissingTablesAndColumns crashes on Android
+                    exec("ALTER TABLE news_details ADD COLUMN IF NOT EXISTS is_followed BOOLEAN DEFAULT FALSE")
+
+                    // Insert Test Data
+                    Clubs.upsert {
+                        it[id] = 999
+                        it[name] = "Club Test"
+                        it[logo] = ""
+                        it[url] = ""
+                    }
+
+                    val now = LocalDateTime.now()
+
+                    // News 1h
+                    News.upsert {
+                        it[id] = 998
+                        it[title] = "Test Event 1h"
+                        it[summary] = "Cet événement commence dans 1h00 et 5s."
+                        it[isPublished] = true
+                        it[isFollowed] = true
+                        it[url] = ""
+                        it[clubId] = 999
+                    }
+                    NewsPagination.upsert {
+                        it[id] = 998
+                        it[newsDetailId] = 998
+                        it[startDate] = now.plusHours(1).plusSeconds(5)
+                        it[endDate] = now.plusHours(2)
+                    }
+
+                    // News 24h
+                    News.upsert {
+                        it[id] = 997
+                        it[title] = "Test Event 24h"
+                        it[summary] = "Cet événement commence dans 24h00 et 10s."
+                        it[isPublished] = true
+                        it[isFollowed] = true
+                        it[url] = ""
+                        it[clubId] = 999
+                    }
+                    NewsPagination.upsert {
+                        it[id] = 997
+                        it[newsDetailId] = 997
+                        it[startDate] = now.plusHours(24).plusSeconds(10)
+                        it[endDate] = now.plusHours(25)
+                    }
                 }
 
                 val client = HttpClient(CIO) {
@@ -80,9 +128,20 @@ class dataBaseManager(
                 }
 
                 val networkManager = NetworkManager(activity.applicationContext)
-                val newManager = dataBaseManager(client, diskDB, networkManager)
+                val notificationManager = NotificationManager(activity.applicationContext)
+                val newManager = dataBaseManager(client, diskDB, networkManager, notificationManager)
 
                 newManager.refresh()
+
+                // Test notification
+                notificationManager.sendTestNotification()
+
+                // Schedule notifications for followed news
+                withContext(Dispatchers.IO) {
+                    newManager.repository.getAllNews().filter { it.isFollowed }.forEach { news ->
+                        newManager.notificationManager.scheduleNewsNotifications(news)
+                    }
+                }
 
                 Log.d("DB_Loggin", "init End")
                 withContext(Dispatchers.Main) {
@@ -104,7 +163,7 @@ class dataBaseManager(
         val now = LocalDate.now().toString()
         try {
             withContext(Dispatchers.IO) {
-                var newDTO = newService.getNews(now);
+                var newDTO = newService.getNews(now)
 
                 if (newDTO.isEmpty()) {
                     if (!networkManager.isNetworkAvailable()) {
