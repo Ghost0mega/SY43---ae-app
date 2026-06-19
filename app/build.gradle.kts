@@ -70,4 +70,5 @@ dependencies {
     implementation(libs.exposed.java.time)
     implementation(libs.exposed.jdbc)
     implementation(libs.h2)
+    implementation("com.google.android.gms:play-services-location:21.0.1")
 }

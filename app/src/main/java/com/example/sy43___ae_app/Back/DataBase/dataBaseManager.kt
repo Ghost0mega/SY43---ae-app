@@ -75,6 +75,8 @@ class dataBaseManager(
                     )
                     // Manual migration for the new column as createMissingTablesAndColumns crashes on Android
                     exec("ALTER TABLE news_details ADD COLUMN IF NOT EXISTS is_followed BOOLEAN DEFAULT FALSE")
+                    exec("ALTER TABLE news_details ADD COLUMN IF NOT EXISTS latitude DOUBLE")
+                    exec("ALTER TABLE news_details ADD COLUMN IF NOT EXISTS longitude DOUBLE")
 
                     // Insert Test Data
                     Clubs.upsert {
@@ -86,15 +88,17 @@ class dataBaseManager(
 
                     val now = LocalDateTime.now()
 
-                    // News 1h
+                    // News 1h - Located at ME Belfort
                     News.upsert {
                         it[id] = 998
                         it[title] = "Test Event 1h"
-                        it[summary] = "Cet événement commence dans 1h00 et 5s."
+                        it[summary] = "Cet événement commence dans 1h00 et 5s. Lieu: Maison des Étudiants."
                         it[isPublished] = true
                         it[isFollowed] = true
                         it[url] = ""
                         it[clubId] = 999
+                        it[latitude] = 47.64126250809711
+                        it[longitude] = 6.846063710767979
                     }
                     NewsPagination.upsert {
                         it[id] = 998
@@ -103,15 +107,17 @@ class dataBaseManager(
                         it[endDate] = now.plusHours(2)
                     }
 
-                    // News 24h
+                    // News 24h - Located at ME Belfort (Forced)
                     News.upsert {
                         it[id] = 997
                         it[title] = "Test Event 24h"
-                        it[summary] = "Cet événement commence dans 24h00 et 10s."
+                        it[summary] = "Cet événement commence dans 24h00 et 10s. Lieu: Maison des Étudiants."
                         it[isPublished] = true
                         it[isFollowed] = true
                         it[url] = ""
                         it[clubId] = 999
+                        it[latitude] = 47.64126250809711
+                        it[longitude] = 6.846063710767979
                     }
                     NewsPagination.upsert {
                         it[id] = 997
@@ -197,6 +203,9 @@ class dataBaseManager(
                             it[isPublished] = result.news.isPublished
                             it[url] = result.news.url
                             it[clubId] = result.news.club.id
+                            // Force all locations to ME Belfort as API doesn't support it yet
+                            it[latitude] = 47.64126250809711
+                            it[longitude] = 6.846063710767979
                         }
 
                         NewsPagination.upsert {

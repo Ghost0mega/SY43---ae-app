@@ -41,7 +41,9 @@ class Repository {
                         startDate = row[NewsPagination.startDate],
                         endDate = row[NewsPagination.endDate],
                         lastUpdate = lastupdate,
-                        isFollowed = row[News.isFollowed]
+                        isFollowed = row[News.isFollowed],
+                        latitude = row[News.latitude],
+                        longitude = row[News.longitude]
                     )
                 }
         }
@@ -105,7 +107,9 @@ class Repository {
                             startDate = row[NewsPagination.startDate],
                             endDate = row[NewsPagination.endDate],
                             lastUpdate = lastupdate,
-                            isFollowed = true
+                            isFollowed = true,
+                            latitude = row[News.latitude],
+                            longitude = row[News.longitude]
                         )
                         notificationManager?.scheduleNewsNotifications(news)
                     }
