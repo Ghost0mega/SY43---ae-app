@@ -75,6 +75,50 @@ class dataBaseManager(
                     )
                     // Manual migration for the new column as createMissingTablesAndColumns crashes on Android
                     exec("ALTER TABLE news_details ADD COLUMN IF NOT EXISTS is_followed BOOLEAN DEFAULT FALSE")
+
+                    // Insert Test Data
+                    Clubs.upsert {
+                        it[id] = 999
+                        it[name] = "Club Test"
+                        it[logo] = ""
+                        it[url] = ""
+                    }
+
+                    val now = LocalDateTime.now()
+
+                    // News 1h
+                    News.upsert {
+                        it[id] = 998
+                        it[title] = "Test Event 1h"
+                        it[summary] = "Cet événement commence dans 1h00 et 5s."
+                        it[isPublished] = true
+                        it[isFollowed] = true
+                        it[url] = ""
+                        it[clubId] = 999
+                    }
+                    NewsPagination.upsert {
+                        it[id] = 998
+                        it[newsDetailId] = 998
+                        it[startDate] = now.plusHours(1).plusSeconds(5)
+                        it[endDate] = now.plusHours(2)
+                    }
+
+                    // News 24h
+                    News.upsert {
+                        it[id] = 997
+                        it[title] = "Test Event 24h"
+                        it[summary] = "Cet événement commence dans 24h00 et 10s."
+                        it[isPublished] = true
+                        it[isFollowed] = true
+                        it[url] = ""
+                        it[clubId] = 999
+                    }
+                    NewsPagination.upsert {
+                        it[id] = 997
+                        it[newsDetailId] = 997
+                        it[startDate] = now.plusHours(24).plusSeconds(10)
+                        it[endDate] = now.plusHours(25)
+                    }
                 }
 
                 val client = HttpClient(CIO) {
@@ -119,7 +163,7 @@ class dataBaseManager(
         val now = LocalDate.now().toString()
         try {
             withContext(Dispatchers.IO) {
-                var newDTO = newService.getNews(now);
+                var newDTO = newService.getNews(now)
 
                 if (newDTO.isEmpty()) {
                     if (!networkManager.isNetworkAvailable()) {
