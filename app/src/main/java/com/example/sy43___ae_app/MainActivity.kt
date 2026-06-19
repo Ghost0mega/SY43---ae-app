@@ -9,10 +9,10 @@ import androidx.annotation.RequiresPermission
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -34,6 +34,7 @@ import com.example.sy43___ae_app.ui.theme.SY43aeappTheme
 import com.example.sy43___ae_app.ui.screens.CalendarScreen
 import com.example.sy43___ae_app.ui.screens.NewsScreen
 import com.example.sy43___ae_app.ui.screens.ClubsScreen
+import com.example.sy43___ae_app.ui.screens.FollowedNewsScreen
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.tooling.preview.Preview
@@ -46,7 +47,7 @@ private enum class BottomTab(val label: String, val icon: ImageVector) {
     NEWS("News", Icons.Filled.Newspaper),
     CALENDAR("Calendar", Icons.Filled.CalendarMonth),
     CLUBS("Clubs", Icons.Filled.Groups),
-    SETTINGS("Settings", Icons.Filled.Settings)
+    FOLLOWED("Followed", Icons.Filled.Star)
 }
 
 /**
@@ -129,7 +130,7 @@ private fun AppWithBottomNav(modifier: Modifier = Modifier) {
             BottomTab.NEWS -> NewsScreen(modifier = contentModifier, dataBaseManager.instance)
             BottomTab.CALENDAR -> CalendarScreen(modifier = contentModifier, dataBaseManager.instance)
             BottomTab.CLUBS -> ClubsScreen(modifier = contentModifier, dataBaseManager.instance)
-            BottomTab.SETTINGS -> PlaceholderScreen(title = "Settings", modifier = contentModifier)
+            BottomTab.FOLLOWED -> FollowedNewsScreen(modifier = contentModifier, dataBaseManager.instance)
         }
     }
 }

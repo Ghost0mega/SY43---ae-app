@@ -71,6 +71,8 @@ class dataBaseManager(
                         NewsPagination,
                         Members
                     )
+                    // Manual migration for the new column as createMissingTablesAndColumns crashes on Android
+                    exec("ALTER TABLE news_details ADD COLUMN IF NOT EXISTS is_followed BOOLEAN DEFAULT FALSE")
                 }
 
                 val client = HttpClient(CIO) {

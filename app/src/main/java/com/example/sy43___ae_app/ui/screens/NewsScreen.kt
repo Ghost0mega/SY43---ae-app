@@ -23,6 +23,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -213,7 +216,18 @@ fun NewsScreen(modifier: Modifier = Modifier, db: dataBaseManager?) {
                         items = groupedNews,
                         key = { _, dayGroup -> dayGroup.key.toString() }
                     ) { _, dayGroup ->
-                        NewsDayCard(dayNews = dayGroup.value)
+                        NewsDayCard(
+                            dayNews = dayGroup.value,
+                            onFollowClick = { newsId, followed ->
+                                coroutineScope.launch(Dispatchers.IO) {
+                                    db?.repository?.toggleFollowNews(newsId, followed)
+                                    val updatedNews = db?.repository?.getAllNews()?.sortedBy { it.startDate } ?: emptyList()
+                                    withContext(Dispatchers.Main) {
+                                        news = updatedNews
+                                    }
+                                }
+                            }
+                        )
                     }
                 }
             }
@@ -226,7 +240,11 @@ fun NewsScreen(modifier: Modifier = Modifier, db: dataBaseManager?) {
  * Includes a colored date badge and event details
  */
 @Composable
-private fun NewsDayCard(dayNews: List<NewUI>, modifier: Modifier = Modifier) {
+private fun NewsDayCard(
+    dayNews: List<NewUI>,
+    onFollowClick: (Int, Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
     if (dayNews.isEmpty()) return
 
     val sortedDayNews = remember(dayNews) { dayNews.sortedBy { it.startDate } }
@@ -256,7 +274,10 @@ private fun NewsDayCard(dayNews: List<NewUI>, modifier: Modifier = Modifier) {
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 sortedDayNews.forEachIndexed { index, news ->
-                    NewsEventContent(news = news)
+                    NewsEventContent(
+                        news = news,
+                        onFollowClick = { onFollowClick(news.id, !news.isFollowed) }
+                    )
                     if (index < sortedDayNews.lastIndex) {
                         HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
                     }
@@ -271,7 +292,7 @@ private fun NewsDayCard(dayNews: List<NewUI>, modifier: Modifier = Modifier) {
  * Shows: club logo, title, club name, date range, and summary
  */
 @Composable
-private fun NewsEventContent(news: NewUI) {
+fun NewsEventContent(news: NewUI, onFollowClick: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -286,7 +307,10 @@ private fun NewsEventContent(news: NewUI) {
                     .clip(RoundedCornerShape(6.dp))
             )
 
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
                 // Event title (with markdown support)
                 MarkdownText(
                     text = news.title,
@@ -298,6 +322,14 @@ private fun NewsEventContent(news: NewUI) {
                     text = news.clubName,
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.secondary
+                )
+            }
+
+            IconButton(onClick = onFollowClick) {
+                Icon(
+                    imageVector = if (news.isFollowed) Icons.Filled.Star else Icons.Filled.StarBorder,
+                    contentDescription = if (news.isFollowed) "Unfollow" else "Follow",
+                    tint = if (news.isFollowed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                 )
             }
         }
@@ -324,7 +356,7 @@ private fun NewsEventContent(news: NewUI) {
  * Example: "LUN" / "04" / "JUN"
  */
 @Composable
-private fun DateBadge(startDate: LocalDateTime, modifier: Modifier = Modifier) {
+fun DateBadge(startDate: LocalDateTime, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp))

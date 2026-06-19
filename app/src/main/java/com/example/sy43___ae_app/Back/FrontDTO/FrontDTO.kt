@@ -11,7 +11,8 @@ data class NewUI(
     val logoUrl: String,
     val startDate: LocalDateTime,
     val endDate: LocalDateTime,
-    val lastUpdate: Query
+    val lastUpdate: Query,
+    val isFollowed: Boolean = false
 )
 
 data class ClubUI(
