@@ -12,7 +12,9 @@ data class NewUI(
     val startDate: LocalDateTime,
     val endDate: LocalDateTime,
     val lastUpdate: Query,
-    val isFollowed: Boolean = false
+    val isFollowed: Boolean = false,
+    val latitude: Double? = null,
+    val longitude: Double? = null
 )
 
 data class ClubUI(

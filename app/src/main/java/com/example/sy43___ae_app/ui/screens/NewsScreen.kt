@@ -1,5 +1,7 @@
 package com.example.sy43___ae_app.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -9,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.IconButton
@@ -47,10 +51,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.sy43___ae_app.Back.DataBase.dataBaseManager
 import com.example.sy43___ae_app.Back.FrontDTO.NewUI
+import com.example.sy43___ae_app.ui.utils.LocationHelper
 import com.example.sy43___ae_app.ui.utils.MarkdownText
 import com.example.sy43___ae_app.ui.utils.UrlImage
 import com.example.sy43___ae_app.ui.utils.formatBadgeDay
@@ -69,6 +75,7 @@ import java.time.LocalDateTime
  *
  * Features:
  * - Groups news by date with expandable date selector
+ * - Shows distance to event if location is available
  * - Shows each date's news in a card with time badge
  * - Supports markdown text rendering in titles and summaries
  * - Displays club logos and event information
@@ -76,10 +83,19 @@ import java.time.LocalDateTime
  */
 @Composable
 fun NewsScreen(modifier: Modifier = Modifier, db: dataBaseManager?) {
-
+    val context = LocalContext.current
+    val locationHelper = remember { LocationHelper(context) }
+    var currentLocation by remember { mutableStateOf<android.location.Location?>(null) }
     var news by remember { mutableStateOf<List<NewUI>>(emptyList()) }
     var errorMessage by remember { mutableStateOf("") }
     var hasLoaded by remember { mutableStateOf(false) }
+
+    // Fetch location
+    LaunchedEffect(Unit) {
+        locationHelper.getCurrentLocation { location ->
+            currentLocation = location
+        }
+    }
 
     // Load all news from database on initialization
     LaunchedEffect(db) {
@@ -218,6 +234,8 @@ fun NewsScreen(modifier: Modifier = Modifier, db: dataBaseManager?) {
                     ) { _, dayGroup ->
                         NewsDayCard(
                             dayNews = dayGroup.value,
+                            currentLocation = currentLocation,
+                            locationHelper = locationHelper,
                             onFollowClick = { newsId, followed ->
                                 coroutineScope.launch(Dispatchers.IO) {
                                     db?.repository?.toggleFollowNews(newsId, followed, db.notificationManager)
@@ -235,13 +253,11 @@ fun NewsScreen(modifier: Modifier = Modifier, db: dataBaseManager?) {
     }
 }
 
-/**
- * NewsDayCard - A card showing all news for a single day
- * Includes a colored date badge and event details
- */
 @Composable
 private fun NewsDayCard(
     dayNews: List<NewUI>,
+    currentLocation: android.location.Location?,
+    locationHelper: LocationHelper,
     onFollowClick: (Int, Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -276,6 +292,8 @@ private fun NewsDayCard(
                 sortedDayNews.forEachIndexed { index, news ->
                     NewsEventContent(
                         news = news,
+                        currentLocation = currentLocation,
+                        locationHelper = locationHelper,
                         onFollowClick = { onFollowClick(news.id, !news.isFollowed) }
                     )
                     if (index < sortedDayNews.lastIndex) {
@@ -289,10 +307,16 @@ private fun NewsDayCard(
 
 /**
  * NewsEventContent - Details of a single news event
- * Shows: club logo, title, club name, date range, and summary
+ * Shows: club logo, title, club name, date range, distance and summary
  */
 @Composable
-fun NewsEventContent(news: NewUI, onFollowClick: () -> Unit) {
+fun NewsEventContent(
+    news: NewUI,
+    currentLocation: android.location.Location?,
+    locationHelper: LocationHelper,
+    onFollowClick: () -> Unit
+) {
+    val context = LocalContext.current
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -334,12 +358,34 @@ fun NewsEventContent(news: NewUI, onFollowClick: () -> Unit) {
             }
         }
 
-        // Date range
-        Text(
-            text = "${formatNewsDate(news.startDate)} - ${formatNewsDate(news.endDate)}",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Date range
+            Text(
+                text = "${formatNewsDate(news.startDate)} - ${formatNewsDate(news.endDate)}",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
+            )
+
+            // Distance
+            if (currentLocation != null && news.latitude != null && news.longitude != null) {
+                val distance = locationHelper.calculateDistance(
+                    currentLocation.latitude, currentLocation.longitude,
+                    news.latitude, news.longitude
+                )
+                Text(
+                    text = locationHelper.formatDistance(distance),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+            }
+        }
 
         // Summary (with markdown support)
         MarkdownText(
@@ -347,6 +393,27 @@ fun NewsEventContent(news: NewUI, onFollowClick: () -> Unit) {
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface
         )
+
+        // Navigate button
+        if (news.latitude != null && news.longitude != null) {
+            androidx.compose.material3.TextButton(
+                onClick = {
+                    val gmmIntentUri = Uri.parse("google.navigation:q=${news.latitude},${news.longitude}")
+                    val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
+                    mapIntent.setPackage("com.google.android.apps.maps")
+                    context.startActivity(mapIntent)
+                },
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Navigation,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("S'y rendre")
+            }
+        }
     }
 }
 

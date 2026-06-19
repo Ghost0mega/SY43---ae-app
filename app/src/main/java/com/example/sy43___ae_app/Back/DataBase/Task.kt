@@ -48,6 +48,8 @@ object News : Table("news_details") {
     val isPublished = bool("is_published").default(false)
     val isFollowed = bool("is_followed").default(false)
     val url = varchar("url", MAX_URL_LENGTH)
+    val latitude = double("latitude").nullable()
+    val longitude = double("longitude").nullable()
 
     // Clé étrangère vers le club qui publie la news
     val clubId = integer("club_id").references(Clubs.id)

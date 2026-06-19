@@ -30,10 +30,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.sy43___ae_app.Back.DataBase.dataBaseManager
 import com.example.sy43___ae_app.Back.FrontDTO.NewUI
+import com.example.sy43___ae_app.ui.utils.LocationHelper
 import com.example.sy43___ae_app.ui.utils.formatDateFrench
 import com.example.sy43___ae_app.ui.utils.formatDayNameFrench
 import com.example.sy43___ae_app.ui.utils.formatMonthFrench
@@ -49,15 +51,26 @@ import java.time.format.DateTimeFormatter
  * Features:
  * - Month navigation with previous/next buttons
  * - Events displayed in chronological order
+ * - Shows distance to event if location is available
  * - Tertiary-colored header matching the news page design
  * - Shows loading, error, and empty states
  */
 @Composable
 fun CalendarScreen(modifier: Modifier = Modifier, db: dataBaseManager?) {
+    val context = LocalContext.current
+    val locationHelper = remember { LocationHelper(context) }
+    var currentLocation by remember { mutableStateOf<android.location.Location?>(null) }
     var news by remember { mutableStateOf<List<NewUI>>(emptyList()) }
     var errorMessage by remember { mutableStateOf("") }
     var hasLoaded by remember { mutableStateOf(false) }
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
+
+    // Fetch location
+    LaunchedEffect(Unit) {
+        locationHelper.getCurrentLocation { location ->
+            currentLocation = location
+        }
+    }
 
     // Load events from database on initialization
     LaunchedEffect(db) {
@@ -116,6 +129,8 @@ fun CalendarScreen(modifier: Modifier = Modifier, db: dataBaseManager?) {
                 CalendarGridWithEvents(
                     month = currentMonth,
                     events = news,
+                    currentLocation = currentLocation,
+                    locationHelper = locationHelper,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 8.dp, vertical = 8.dp)
@@ -200,6 +215,8 @@ private fun CalendarHeader(
 private fun CalendarGridWithEvents(
     month: YearMonth,
     events: List<NewUI>,
+    currentLocation: android.location.Location?,
+    locationHelper: LocationHelper,
     modifier: Modifier = Modifier
 ) {
     // Group events by date and filter by current month
@@ -227,7 +244,12 @@ private fun CalendarGridWithEvents(
         items(datesWithEvents.size) { index ->
             val date = datesWithEvents[index]
             val dayEvents = eventsByDate[date] ?: emptyList()
-            CalendarDateSection(date = date, events = dayEvents)
+            CalendarDateSection(
+                date = date,
+                events = dayEvents,
+                currentLocation = currentLocation,
+                locationHelper = locationHelper
+            )
         }
     }
 }
@@ -237,7 +259,12 @@ private fun CalendarGridWithEvents(
  * Shows date header and a list of events for that date
  */
 @Composable
-private fun CalendarDateSection(date: LocalDate, events: List<NewUI>) {
+private fun CalendarDateSection(
+    date: LocalDate,
+    events: List<NewUI>,
+    currentLocation: android.location.Location?,
+    locationHelper: LocationHelper
+) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -258,7 +285,11 @@ private fun CalendarDateSection(date: LocalDate, events: List<NewUI>) {
         ) {
             val sortedEvents = events.sortedBy { it.startDate }
             sortedEvents.forEachIndexed { index, event ->
-                EventRow(event = event)
+                EventRow(
+                    event = event,
+                    currentLocation = currentLocation,
+                    locationHelper = locationHelper
+                )
                 // Add divider between events
                 if (index < sortedEvents.lastIndex) {
                     HorizontalDivider(
@@ -309,7 +340,11 @@ private fun DateHeader(date: LocalDate) {
  * Shows time range, bullet indicator, and event title
  */
 @Composable
-private fun EventRow(event: NewUI) {
+private fun EventRow(
+    event: NewUI,
+    currentLocation: android.location.Location?,
+    locationHelper: LocationHelper
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -338,12 +373,26 @@ private fun EventRow(event: NewUI) {
         )
 
         // Event title
-        Text(
-            text = event.title,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f)
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = event.title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            
+            // Distance in calendar row
+            if (currentLocation != null && event.latitude != null && event.longitude != null) {
+                val distance = locationHelper.calculateDistance(
+                    currentLocation.latitude, currentLocation.longitude,
+                    event.latitude, event.longitude
+                )
+                Text(
+                    text = locationHelper.formatDistance(distance),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
     }
 }
 

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,9 +30,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.sy43___ae_app.Back.DataBase.dataBaseManager
 import com.example.sy43___ae_app.Back.FrontDTO.NewUI
+import com.example.sy43___ae_app.ui.utils.LocationHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -41,9 +44,19 @@ import kotlinx.coroutines.withContext
  */
 @Composable
 fun FollowedNewsScreen(modifier: Modifier = Modifier, db: dataBaseManager?) {
+    val context = LocalContext.current
+    val locationHelper = remember { LocationHelper(context) }
+    var currentLocation by remember { mutableStateOf<android.location.Location?>(null) }
     var news by remember { mutableStateOf<List<NewUI>>(emptyList()) }
     var hasLoaded by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+
+    // Fetch location
+    LaunchedEffect(Unit) {
+        locationHelper.getCurrentLocation { location ->
+            currentLocation = location
+        }
+    }
 
     LaunchedEffect(db) {
         if (db == null) return@LaunchedEffect
@@ -81,6 +94,8 @@ fun FollowedNewsScreen(modifier: Modifier = Modifier, db: dataBaseManager?) {
             ) { _, dayGroup ->
                 FollowedNewsDayCard(
                     dayNews = dayGroup.value,
+                    currentLocation = currentLocation,
+                    locationHelper = locationHelper,
                     onFollowClick = { newsId, followed ->
                         coroutineScope.launch(Dispatchers.IO) {
                             db?.repository?.toggleFollowNews(newsId, followed, db.notificationManager)
@@ -99,6 +114,8 @@ fun FollowedNewsScreen(modifier: Modifier = Modifier, db: dataBaseManager?) {
 @Composable
 private fun FollowedNewsDayCard(
     dayNews: List<NewUI>,
+    currentLocation: android.location.Location?,
+    locationHelper: LocationHelper,
     onFollowClick: (Int, Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -127,6 +144,8 @@ private fun FollowedNewsDayCard(
                 dayNews.forEachIndexed { index, news ->
                     NewsEventContent(
                         news = news,
+                        currentLocation = currentLocation,
+                        locationHelper = locationHelper,
                         onFollowClick = { onFollowClick(news.id, !news.isFollowed) }
                     )
                     if (index < dayNews.lastIndex) {
