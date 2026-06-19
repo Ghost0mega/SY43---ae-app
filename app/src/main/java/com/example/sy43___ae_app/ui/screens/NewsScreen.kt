@@ -220,7 +220,7 @@ fun NewsScreen(modifier: Modifier = Modifier, db: dataBaseManager?) {
                             dayNews = dayGroup.value,
                             onFollowClick = { newsId, followed ->
                                 coroutineScope.launch(Dispatchers.IO) {
-                                    db?.repository?.toggleFollowNews(newsId, followed)
+                                    db?.repository?.toggleFollowNews(newsId, followed, db.notificationManager)
                                     val updatedNews = db?.repository?.getAllNews()?.sortedBy { it.startDate } ?: emptyList()
                                     withContext(Dispatchers.Main) {
                                         news = updatedNews

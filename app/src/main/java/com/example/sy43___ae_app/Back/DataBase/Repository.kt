@@ -4,6 +4,7 @@ import android.util.Log
 import com.example.sy43___ae_app.Back.FrontDTO.ClubUI
 import com.example.sy43___ae_app.Back.FrontDTO.MemberUI
 import com.example.sy43___ae_app.Back.FrontDTO.NewUI
+import com.example.sy43___ae_app.Back.Notification.NotificationManager
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -79,10 +80,37 @@ class Repository {
         }
     }
 
-    fun toggleFollowNews(newsId: Int, isFollowed: Boolean) {
+    fun toggleFollowNews(newsId: Int, isFollowed: Boolean, notificationManager: NotificationManager? = null) {
         transaction {
             News.update({ News.id eq newsId }) {
                 it[News.isFollowed] = isFollowed
+            }
+
+            if (isFollowed) {
+                // Get news details to schedule notifications
+                val lastupdate = DbMetadata
+                    .selectAll()
+                    .where { DbMetadata.key eq "New" }
+
+                (News innerJoin Clubs innerJoin NewsPagination)
+                    .selectAll()
+                    .where { News.id eq newsId }
+                    .firstOrNull()?.let { row ->
+                        val news = NewUI(
+                            id = row[News.id],
+                            title = row[News.title],
+                            summary = row[News.summary],
+                            clubName = row[Clubs.name],
+                            logoUrl = row[Clubs.logo],
+                            startDate = row[NewsPagination.startDate],
+                            endDate = row[NewsPagination.endDate],
+                            lastUpdate = lastupdate,
+                            isFollowed = true
+                        )
+                        notificationManager?.scheduleNewsNotifications(news)
+                    }
+            } else {
+                notificationManager?.cancelNewsNotifications(newsId)
             }
         }
     }

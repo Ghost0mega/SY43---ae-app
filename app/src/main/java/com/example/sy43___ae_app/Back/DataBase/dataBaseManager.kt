@@ -9,6 +9,7 @@ import com.example.sy43___ae_app.Back.Network.ApiServices.ApiServiceImpl
 import com.example.sy43___ae_app.Back.Network.ApiServices.Services.clubService
 import com.example.sy43___ae_app.Back.Network.ApiServices.Services.newService
 import com.example.sy43___ae_app.Back.Network.NetworkManager
+import com.example.sy43___ae_app.Back.Notification.NotificationManager
 import com.example.sy43___ae_app.MainActivity
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
@@ -34,7 +35,8 @@ import java.time.LocalDateTime
 class dataBaseManager(
     client: HttpClient,
     val diskDB : Database,
-    val networkManager: NetworkManager
+    val networkManager: NetworkManager,
+    val notificationManager: NotificationManager
     //, ramDB : Database
 ) {
     val apiService: ApiService = ApiServiceImpl(client, networkManager)
@@ -82,9 +84,20 @@ class dataBaseManager(
                 }
 
                 val networkManager = NetworkManager(activity.applicationContext)
-                val newManager = dataBaseManager(client, diskDB, networkManager)
+                val notificationManager = NotificationManager(activity.applicationContext)
+                val newManager = dataBaseManager(client, diskDB, networkManager, notificationManager)
 
                 newManager.refresh()
+
+                // Test notification
+                notificationManager.sendTestNotification()
+
+                // Schedule notifications for followed news
+                withContext(Dispatchers.IO) {
+                    newManager.repository.getAllNews().filter { it.isFollowed }.forEach { news ->
+                        newManager.notificationManager.scheduleNewsNotifications(news)
+                    }
+                }
 
                 Log.d("DB_Loggin", "init End")
                 withContext(Dispatchers.Main) {
