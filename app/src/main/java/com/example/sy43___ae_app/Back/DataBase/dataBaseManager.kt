@@ -3,16 +3,16 @@ package com.example.sy43___ae_app.Back.DataBase
 import android.Manifest
 import android.util.Log
 import androidx.annotation.RequiresPermission
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import com.example.sy43___ae_app.Back.Network.ApiServices.ApiService
 import com.example.sy43___ae_app.Back.Network.ApiServices.ApiServiceImpl
-import com.example.sy43___ae_app.Back.Network.ApiServices.Services.clubService
 import com.example.sy43___ae_app.Back.Network.ApiServices.Services.newService
 import com.example.sy43___ae_app.Back.Network.NetworkManager
 import com.example.sy43___ae_app.Back.Notification.NotificationManager
 import com.example.sy43___ae_app.MainActivity
 import io.ktor.client.HttpClient
-import io.ktor.client.HttpClientConfig
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
@@ -21,49 +21,41 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
+import org.jetbrains.exposed.v1.jdbc.replace
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.upsert
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import kotlinx.datetime.LocalTime
-import org.jetbrains.exposed.v1.jdbc.replace
-import java.time.LocalDateTime
 
+/**
+ * dataBaseManager - Manages the local database and network sync
+ */
 class dataBaseManager(
     client: HttpClient,
-    val diskDB : Database,
+    val diskDB: Database,
     val networkManager: NetworkManager,
     val notificationManager: NotificationManager
-    //, ramDB : Database
 ) {
     val apiService: ApiService = ApiServiceImpl(client, networkManager)
-    val clubService = clubService(apiService)
     val newService = newService(apiService)
     val repository = Repository()
 
     companion object {
-        // On stocke l'instance ici pour y accéder partout
         var instance by mutableStateOf<dataBaseManager?>(null)
             private set
+
         @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
         suspend fun init(activity: MainActivity) {
-            withContext(Dispatchers.IO)
-            {
+            withContext(Dispatchers.IO) {
                 Log.d("DB_Loggin", "init Start")
-                // Dans ton code, remplace l'URL de connexion
 
-                // Stock disque dur
                 val dbPath = activity.filesDir.absolutePath + "/ae_database"
-                val diskDB = Database.Companion.connect(
+                val diskDB = Database.connect(
                     "jdbc:h2:file:$dbPath;MODE=MYSQL;DB_CLOSE_DELAY=-1",
                     driver = "org.h2.Driver"
                 )
-
-                // Stock en Ram
-                //val ramDB = Database.connect("jdbc:h2:mem:AE;DB_CLOSE_DELAY=-1", driver = "org.h2.Driver")
 
                 transaction(diskDB) {
                     SchemaUtils.create(
@@ -73,7 +65,7 @@ class dataBaseManager(
                         NewsPagination,
                         Members
                     )
-                    // Manual migration for the new column as createMissingTablesAndColumns crashes on Android
+                    // Manual migration for new columns
                     exec("ALTER TABLE news_details ADD COLUMN IF NOT EXISTS is_followed BOOLEAN DEFAULT FALSE")
                     exec("ALTER TABLE news_details ADD COLUMN IF NOT EXISTS latitude DOUBLE")
                     exec("ALTER TABLE news_details ADD COLUMN IF NOT EXISTS longitude DOUBLE")
@@ -88,7 +80,7 @@ class dataBaseManager(
 
                     val now = LocalDateTime.now()
 
-                    // News 1h - Located at ME Belfort
+                    // News 1h
                     News.upsert {
                         it[id] = 998
                         it[title] = "Test Event 1h"
@@ -107,7 +99,7 @@ class dataBaseManager(
                         it[endDate] = now.plusHours(2)
                     }
 
-                    // News 24h - Located at ME Belfort (Forced)
+                    // News 24h
                     News.upsert {
                         it[id] = 997
                         it[title] = "Test Event 24h"
@@ -139,9 +131,6 @@ class dataBaseManager(
 
                 newManager.refresh()
 
-                // Test notification
-                notificationManager.sendTestNotification()
-
                 // Schedule notifications for followed news
                 withContext(Dispatchers.IO) {
                     newManager.repository.getAllNews().filter { it.isFollowed }.forEach { news ->
@@ -158,8 +147,7 @@ class dataBaseManager(
     }
 
     @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
-    suspend fun refresh(){
-
+    suspend fun refresh() {
         newRefresh()
     }
 
@@ -228,7 +216,7 @@ class dataBaseManager(
                     }
                 }
             }
-        } catch(e : Exception){
+        } catch (e: Exception) {
             Log.d("DB_Loggin", "newRefresh ERROR : $e")
         }
 

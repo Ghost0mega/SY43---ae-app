@@ -23,13 +23,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -37,6 +35,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.OutlinedButton
@@ -52,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.sy43___ae_app.Back.DataBase.dataBaseManager
@@ -67,19 +67,10 @@ import com.example.sy43___ae_app.ui.utils.formatNewsDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.time.LocalDate
 import java.time.LocalDateTime
 
 /**
  * NewsScreen - Displays all news events grouped by date with a date selector
- *
- * Features:
- * - Groups news by date with expandable date selector
- * - Shows distance to event if location is available
- * - Shows each date's news in a card with time badge
- * - Supports markdown text rendering in titles and summaries
- * - Displays club logos and event information
- * - Handles loading, error, and empty states
  */
 @Composable
 fun NewsScreen(modifier: Modifier = Modifier, db: dataBaseManager?) {
@@ -253,6 +244,9 @@ fun NewsScreen(modifier: Modifier = Modifier, db: dataBaseManager?) {
     }
 }
 
+/**
+ * NewsDayCard - A card showing all news for a single day
+ */
 @Composable
 private fun NewsDayCard(
     dayNews: List<NewUI>,
@@ -276,7 +270,7 @@ private fun NewsDayCard(
                 .height(IntrinsicSize.Min),
             verticalAlignment = Alignment.Top
         ) {
-            // Left side: Date badge with day/date/month
+            // Left side: Date badge
             DateBadge(
                 startDate = sortedDayNews.first().startDate,
                 modifier = Modifier.fillMaxHeight()
@@ -307,7 +301,6 @@ private fun NewsDayCard(
 
 /**
  * NewsEventContent - Details of a single news event
- * Shows: club logo, title, club name, date range, distance and summary
  */
 @Composable
 fun NewsEventContent(
@@ -335,7 +328,7 @@ fun NewsEventContent(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                // Event title (with markdown support)
+                // Event title
                 MarkdownText(
                     text = news.title,
                     style = MaterialTheme.typography.titleMedium,
@@ -381,13 +374,13 @@ fun NewsEventContent(
                     text = locationHelper.formatDistance(distance),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(start = 8.dp)
                 )
             }
         }
 
-        // Summary (with markdown support)
+        // Summary
         MarkdownText(
             text = news.summary,
             style = MaterialTheme.typography.bodyLarge,
@@ -419,8 +412,6 @@ fun NewsEventContent(
 
 /**
  * DateBadge - Colored badge showing weekday, day, and month
- * Used as a visual indicator for date and time
- * Example: "LUN" / "04" / "JUN"
  */
 @Composable
 fun DateBadge(startDate: LocalDateTime, modifier: Modifier = Modifier) {
@@ -436,21 +427,18 @@ fun DateBadge(startDate: LocalDateTime, modifier: Modifier = Modifier) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            // Weekday (MON, TUE, etc.)
             Text(
                 text = formatBadgeWeekday(startDate),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSecondary,
                 textAlign = TextAlign.Center
             )
-            // Day number
             Text(
                 text = formatBadgeDay(startDate),
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onSecondary,
                 textAlign = TextAlign.Center
             )
-            // Month
             Text(
                 text = formatBadgeMonth(startDate),
                 style = MaterialTheme.typography.titleMedium,
@@ -460,6 +448,3 @@ fun DateBadge(startDate: LocalDateTime, modifier: Modifier = Modifier) {
         }
     }
 }
-
-
-

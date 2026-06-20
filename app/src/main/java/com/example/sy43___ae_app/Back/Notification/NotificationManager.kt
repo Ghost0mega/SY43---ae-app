@@ -7,12 +7,13 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import androidx.core.app.NotificationCompat
 import com.example.sy43___ae_app.Back.FrontDTO.NewUI
-import com.example.sy43___ae_app.R
 import java.time.LocalDateTime
 import java.time.ZoneId
 
+/**
+ * NotificationManager - Handles scheduling and canceling notifications for followed news
+ */
 class NotificationManager(private val context: Context) {
 
     init {
@@ -23,7 +24,7 @@ class NotificationManager(private val context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val name = "Suivi d'actualités"
             val descriptionText = "Notifications pour les événements suivis"
-            val importance = NotificationManager.IMPORTANCE_DEFAULT
+            val importance = NotificationManager.IMPORTANCE_LOW
             val channel = NotificationChannel("NEWS_FOLLOW_CHANNEL", name, importance).apply {
                 description = descriptionText
             }
@@ -62,20 +63,6 @@ class NotificationManager(private val context: Context) {
     fun cancelNewsNotifications(newsId: Int) {
         cancelNotification(newsId * 2)
         cancelNotification(newsId * 2 + 1)
-    }
-
-    fun sendTestNotification() {
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        
-        val channelId = "NEWS_FOLLOW_CHANNEL"
-        val builder = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.mipmap.ae_icon)
-            .setContentTitle("Test de notification")
-            .setContentText("Ceci est une notification de test au démarrage de l'application.")
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setAutoCancel(true)
-
-        notificationManager.notify(999, builder.build())
     }
 
     private fun scheduleNotification(id: Int, title: String, message: String, time: LocalDateTime) {

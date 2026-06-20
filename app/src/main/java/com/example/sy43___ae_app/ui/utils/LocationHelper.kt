@@ -9,7 +9,10 @@ import com.google.android.gms.tasks.CancellationTokenSource
 import java.util.Locale
 import kotlin.math.*
 
-class LocationHelper(private val context: Context) {
+/**
+ * LocationHelper - Utilities for GPS location and distance calculation
+ */
+class LocationHelper(context: Context) {
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
 
     @SuppressLint("MissingPermission")
