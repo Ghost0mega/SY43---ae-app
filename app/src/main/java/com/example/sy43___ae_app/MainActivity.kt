@@ -21,11 +21,24 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.lifecycleScope
@@ -36,6 +49,12 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.sy43___ae_app.ui.screens.CalendarScreen
 import com.example.sy43___ae_app.ui.screens.NewsScreen
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import com.example.sy43___ae_app.ui.screens.ClubsScreen
 import com.example.sy43___ae_app.ui.screens.FollowedNewsScreen
 import kotlinx.coroutines.launch
@@ -106,13 +125,56 @@ class MainActivity : ComponentActivity() {
  *
  * @param modifier Layout modifier
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AppWithBottomNav(modifier: Modifier = Modifier) {
     // Track currently selected tab
     var selectedTabIndex by rememberSaveable { mutableIntStateOf(BottomTab.NEWS.ordinal) }
+    var followedCount by remember { mutableIntStateOf(0) }
+    val db = dataBaseManager.instance
+
+    // Update followed news count for the badge
+    LaunchedEffect(db, selectedTabIndex) {
+        if (db != null) {
+            val news = withContext(Dispatchers.IO) {
+                db.repository.getAllNews()
+            }
+            followedCount = news.count { it.isFollowed }
+        }
+    }
 
     Scaffold(
         modifier = modifier,
+        topBar = {
+            TopAppBar(
+                title = { 
+                    Column {
+                        Text("Portail AE UTBM", style = MaterialTheme.typography.titleMedium)
+                        Text("Étudiant : Default", style = MaterialTheme.typography.labelSmall)
+                    }
+                },
+                actions = {
+                    BadgedBox(
+                        badge = {
+                            if (followedCount > 0) {
+                                Badge { Text(followedCount.toString()) }
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.AccountCircle,
+                            contentDescription = "Profil",
+                            modifier = Modifier.padding(end = 16.dp).size(32.dp)
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            )
+        },
         bottomBar = {
             // Bottom navigation bar with all tabs
             NavigationBar(containerColor = MaterialTheme.colorScheme.primary) {
@@ -143,12 +205,26 @@ private fun AppWithBottomNav(modifier: Modifier = Modifier) {
             .fillMaxSize()
             .padding(innerPadding)
 
-        // Display the appropriate screen based on selected tab
-        when (BottomTab.entries[selectedTabIndex]) {
-            BottomTab.NEWS -> NewsScreen(modifier = contentModifier, dataBaseManager.instance)
-            BottomTab.CALENDAR -> CalendarScreen(modifier = contentModifier, dataBaseManager.instance)
-            BottomTab.CLUBS -> ClubsScreen(modifier = contentModifier, dataBaseManager.instance)
-            BottomTab.FOLLOWED -> FollowedNewsScreen(modifier = contentModifier, dataBaseManager.instance)
+        // Display the appropriate screen based on selected tab with animation
+        AnimatedContent(
+            targetState = BottomTab.entries[selectedTabIndex],
+            transitionSpec = {
+                if (targetState.ordinal > initialState.ordinal) {
+                    slideInHorizontally { it } + fadeIn() togetherWith
+                            slideOutHorizontally { -it } + fadeOut()
+                } else {
+                    slideInHorizontally { -it } + fadeIn() togetherWith
+                            slideOutHorizontally { it } + fadeOut()
+                }
+            },
+            label = "TabTransition"
+        ) { targetTab ->
+            when (targetTab) {
+                BottomTab.NEWS -> NewsScreen(modifier = contentModifier, dataBaseManager.instance)
+                BottomTab.CALENDAR -> CalendarScreen(modifier = contentModifier, dataBaseManager.instance)
+                BottomTab.CLUBS -> ClubsScreen(modifier = contentModifier, dataBaseManager.instance)
+                BottomTab.FOLLOWED -> FollowedNewsScreen(modifier = contentModifier, dataBaseManager.instance)
+            }
         }
     }
 }

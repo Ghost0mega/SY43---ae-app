@@ -1,6 +1,12 @@
 package com.example.sy43___ae_app.ui.screens
 
 import android.util.Log
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -119,22 +125,37 @@ fun ClubsScreen(modifier: Modifier = Modifier, db: dataBaseManager?) {
             }
         }
 
-        // Show club detail if one is selected
-        selectedClub != null -> {
-            ClubDetailView(
-                club = selectedClub!!,
-                onBackClick = { selectedClub = null },
-                modifier = modifier
-            )
-        }
-
-        // Show clubs list
+        // Show content with animation
         else -> {
-            ClubsListView(
-                clubs = clubs,
-                onClubClick = { selectedClub = it },
-                modifier = modifier
-            )
+            AnimatedContent(
+                targetState = selectedClub,
+                transitionSpec = {
+                    if (targetState != null) {
+                        // Slide in from right when opening details
+                        slideInHorizontally { it } + fadeIn() togetherWith
+                                slideOutHorizontally { -it / 2 } + fadeOut()
+                    } else {
+                        // Slide in from left when going back
+                        slideInHorizontally { -it } + fadeIn() togetherWith
+                                slideOutHorizontally { it / 2 } + fadeOut()
+                    }
+                },
+                label = "ClubTransition"
+            ) { targetClub ->
+                if (targetClub != null) {
+                    ClubDetailView(
+                        club = targetClub,
+                        onBackClick = { selectedClub = null },
+                        modifier = modifier
+                    )
+                } else {
+                    ClubsListView(
+                        clubs = clubs,
+                        onClubClick = { selectedClub = it },
+                        modifier = modifier
+                    )
+                }
+            }
         }
     }
 }

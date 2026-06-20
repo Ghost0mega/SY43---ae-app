@@ -139,9 +139,6 @@ class dataBaseManager(
 
                 newManager.refresh()
 
-                // Test notification
-                notificationManager.sendTestNotification()
-
                 // Schedule notifications for followed news
                 withContext(Dispatchers.IO) {
                     newManager.repository.getAllNews().filter { it.isFollowed }.forEach { news ->
