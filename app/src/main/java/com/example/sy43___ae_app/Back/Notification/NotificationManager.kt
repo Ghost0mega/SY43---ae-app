@@ -7,12 +7,13 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import androidx.core.app.NotificationCompat
 import com.example.sy43___ae_app.Back.FrontDTO.NewUI
-import com.example.sy43___ae_app.R
 import java.time.LocalDateTime
 import java.time.ZoneId
 
+/**
+ * NotificationManager - Handles scheduling and canceling notifications for followed news
+ */
 class NotificationManager(private val context: Context) {
 
     init {

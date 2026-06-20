@@ -1,18 +1,32 @@
 package com.example.sy43___ae_app
 
 import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresPermission
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Newspaper
-import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Newspaper
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -20,15 +34,9 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -36,34 +44,26 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.lifecycle.lifecycleScope
-import com.example.sy43___ae_app.Back.DataBase.dataBaseManager
-import com.example.sy43___ae_app.ui.theme.SY43aeappTheme
-import android.content.pm.PackageManager
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import com.example.sy43___ae_app.Back.DataBase.dataBaseManager
 import com.example.sy43___ae_app.ui.screens.CalendarScreen
-import com.example.sy43___ae_app.ui.screens.NewsScreen
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import com.example.sy43___ae_app.ui.screens.ClubsScreen
 import com.example.sy43___ae_app.ui.screens.FollowedNewsScreen
+import com.example.sy43___ae_app.ui.screens.NewsScreen
+import com.example.sy43___ae_app.ui.theme.SY43aeappTheme
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import androidx.compose.foundation.layout.Box
-import androidx.compose.ui.tooling.preview.Preview
+import kotlinx.coroutines.withContext
 
 /**
  * BottomTab enum - Represents the different tabs in the bottom navigation bar
- * Used for navigation between major screens (News, Calendar, Clubs, Settings)
+ * Used for navigation between major screens (News, Calendar, Clubs, Followed)
  */
 private enum class BottomTab(val label: String, val icon: ImageVector) {
     NEWS("News", Icons.Filled.Newspaper),
@@ -74,11 +74,6 @@ private enum class BottomTab(val label: String, val icon: ImageVector) {
 
 /**
  * MainActivity - Main entry point for the application
- *
- * Responsibilities:
- * - Initialize the database manager
- * - Set up the app theme
- * - Display the main navigation UI
  */
 class MainActivity : ComponentActivity() {
 
@@ -86,7 +81,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Request permissions for Android 13+
+        // Request permissions
         val permissionsToRequest = mutableListOf<String>()
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -118,12 +113,6 @@ class MainActivity : ComponentActivity() {
 
 /**
  * AppWithBottomNav - Main app layout with bottom navigation
- *
- * Structure:
- * - Top: Content area (News, Calendar, Clubs, or Settings)
- * - Bottom: Navigation bar with 4 tabs
- *
- * @param modifier Layout modifier
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -150,7 +139,7 @@ private fun AppWithBottomNav(modifier: Modifier = Modifier) {
                 title = { 
                     Column {
                         Text("Portail AE UTBM", style = MaterialTheme.typography.titleMedium)
-                        Text("Étudiant : Default", style = MaterialTheme.typography.labelSmall)
+                        Text("Étudiant : Ghost0mega", style = MaterialTheme.typography.labelSmall)
                     }
                 },
                 actions = {
@@ -226,19 +215,6 @@ private fun AppWithBottomNav(modifier: Modifier = Modifier) {
                 BottomTab.FOLLOWED -> FollowedNewsScreen(modifier = contentModifier, dataBaseManager.instance)
             }
         }
-    }
-}
-
-/**
- * PlaceholderScreen - Temporary placeholder for unimplemented screens (Clubs, Settings)
- *
- * @param title The title of the screen
- * @param modifier Layout modifier
- */
-@Composable
-private fun PlaceholderScreen(title: String, modifier: Modifier = Modifier) {
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        Text(text = "$title screen", style = MaterialTheme.typography.titleMedium)
     }
 }
 
