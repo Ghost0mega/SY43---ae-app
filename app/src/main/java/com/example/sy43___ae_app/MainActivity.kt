@@ -18,14 +18,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +43,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -117,20 +118,11 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AppWithBottomNav(modifier: Modifier = Modifier) {
-    // Track currently selected tab
-    var selectedTabIndex by rememberSaveable { mutableIntStateOf(BottomTab.NEWS.ordinal) }
-    var followedCount by remember { mutableIntStateOf(0) }
-    val db = dataBaseManager.instance
-
-    // Update followed news count for the badge
-    LaunchedEffect(db, selectedTabIndex) {
-        if (db != null) {
-            val news = withContext(Dispatchers.IO) {
-                db.repository.getAllNews()
-            }
-            followedCount = news.count { it.isFollowed }
-        }
+    // Track currently selected tab using PagerState to allow swiping
+    val pagerState = rememberPagerState(initialPage = BottomTab.NEWS.ordinal) {
+        BottomTab.entries.size
     }
+    val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
         modifier = modifier,
@@ -143,19 +135,11 @@ private fun AppWithBottomNav(modifier: Modifier = Modifier) {
                     }
                 },
                 actions = {
-                    BadgedBox(
-                        badge = {
-                            if (followedCount > 0) {
-                                Badge { Text(followedCount.toString()) }
-                            }
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.AccountCircle,
-                            contentDescription = "Profil",
-                            modifier = Modifier.padding(end = 16.dp).size(32.dp)
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Filled.AccountCircle,
+                        contentDescription = "Profil",
+                        modifier = Modifier.padding(end = 16.dp).size(32.dp)
+                    )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -169,8 +153,12 @@ private fun AppWithBottomNav(modifier: Modifier = Modifier) {
             NavigationBar(containerColor = MaterialTheme.colorScheme.primary) {
                 BottomTab.entries.forEachIndexed { index, tab ->
                     NavigationBarItem(
-                        selected = selectedTabIndex == index,
-                        onClick = { selectedTabIndex = index },
+                        selected = pagerState.currentPage == index,
+                        onClick = {
+                            coroutineScope.launch {
+                                pagerState.animateScrollToPage(index)
+                            }
+                        },
                         icon = {
                             Icon(
                                 imageVector = tab.icon,
@@ -194,25 +182,20 @@ private fun AppWithBottomNav(modifier: Modifier = Modifier) {
             .fillMaxSize()
             .padding(innerPadding)
 
-        // Display the appropriate screen based on selected tab with animation
-        AnimatedContent(
-            targetState = BottomTab.entries[selectedTabIndex],
-            transitionSpec = {
-                if (targetState.ordinal > initialState.ordinal) {
-                    slideInHorizontally { it } + fadeIn() togetherWith
-                            slideOutHorizontally { -it } + fadeOut()
-                } else {
-                    slideInHorizontally { -it } + fadeIn() togetherWith
-                            slideOutHorizontally { it } + fadeOut()
+        // Use HorizontalPager to allow swiping between major screens
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize(),
+            beyondViewportPageCount = 1 // Keep adjacent pages loaded for smoother transition
+        ) { pageIndex ->
+            val tab = BottomTab.entries[pageIndex]
+            Box(modifier = contentModifier) {
+                when (tab) {
+                    BottomTab.NEWS -> NewsScreen(db = dataBaseManager.instance)
+                    BottomTab.CALENDAR -> CalendarScreen(db = dataBaseManager.instance)
+                    BottomTab.CLUBS -> ClubsScreen(db = dataBaseManager.instance)
+                    BottomTab.FOLLOWED -> FollowedNewsScreen(db = dataBaseManager.instance)
                 }
-            },
-            label = "TabTransition"
-        ) { targetTab ->
-            when (targetTab) {
-                BottomTab.NEWS -> NewsScreen(modifier = contentModifier, dataBaseManager.instance)
-                BottomTab.CALENDAR -> CalendarScreen(modifier = contentModifier, dataBaseManager.instance)
-                BottomTab.CLUBS -> ClubsScreen(modifier = contentModifier, dataBaseManager.instance)
-                BottomTab.FOLLOWED -> FollowedNewsScreen(modifier = contentModifier, dataBaseManager.instance)
             }
         }
     }
